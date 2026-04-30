@@ -1,0 +1,15 @@
+{
+  "name": "Driver Hours & Pay Calculator",
+  "short_name": "Driver Pay",
+  "description": "Track company driver hours, breaks, hourly rates, and weekly, fortnightly, or monthly pay.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#07111f",
+  "theme_color": "#2563eb",
+  "categories": ["finance", "productivity", "utilities"],
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
