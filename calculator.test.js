@@ -71,19 +71,32 @@ function testTotalsForMultipleEntries() {
   nearlyEqual(result.grossPay, 332.5 + 262.5 + 320);
 }
 
-function testPeriodRangeWeekly() {
+function testPeriodRangeWeeklyUsesSelectedDateAsPayPeriodStart() {
   const range = periodRange('2026-04-30', 'weekly');
-  assert.deepStrictEqual(range, { start: '2026-04-27', end: '2026-05-03' });
+  assert.deepStrictEqual(range, { start: '2026-04-30', end: '2026-05-06' });
 }
 
-function testPeriodRangeFortnightly() {
+function testPeriodRangeFortnightlyUsesSelectedDateAsPayPeriodStart() {
   const range = periodRange('2026-04-30', 'fortnightly');
-  assert.deepStrictEqual(range, { start: '2026-04-27', end: '2026-05-10' });
+  assert.deepStrictEqual(range, { start: '2026-04-30', end: '2026-05-13' });
 }
 
-function testPeriodRangeMonthly() {
+function testPeriodRangeUnknownDefaultsToFortnightlyStartDate() {
   const range = periodRange('2026-04-30', 'monthly');
-  assert.deepStrictEqual(range, { start: '2026-04-01', end: '2026-04-30' });
+  assert.deepStrictEqual(range, { start: '2026-04-30', end: '2026-05-13' });
+}
+
+function testFortnightlyTotalsIncludeBothWeeksFromStartDate() {
+  const entries = [
+    { date: '2026-04-30', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+    { date: '2026-05-06', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+    { date: '2026-05-13', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+    { date: '2026-05-14', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+  ];
+  const range = periodRange('2026-04-30', 'fortnightly');
+  const selected = entries.filter((entry) => entry.date >= range.start && entry.date <= range.end);
+  const totals = calculateTotals(selected);
+  assert.strictEqual(totals.daysWorked, 3);
 }
 
 function testMinutesToHours() {
@@ -125,9 +138,10 @@ const tests = [
   testOvernightShift,
   testBreakCannotMakeNegativePay,
   testTotalsForMultipleEntries,
-  testPeriodRangeWeekly,
-  testPeriodRangeFortnightly,
-  testPeriodRangeMonthly,
+  testPeriodRangeWeeklyUsesSelectedDateAsPayPeriodStart,
+  testPeriodRangeFortnightlyUsesSelectedDateAsPayPeriodStart,
+  testPeriodRangeUnknownDefaultsToFortnightlyStartDate,
+  testFortnightlyTotalsIncludeBothWeeksFromStartDate,
   testMinutesToHours,
   testHistoryRangeDefaultsToFourteenDaysIncludingAnchorDate,
   testFilterEntriesByHistoryRangeShowsFourteenDaysOnly,

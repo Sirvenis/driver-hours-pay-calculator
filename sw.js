@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wagecheck-au-v2';
+const CACHE_NAME = 'wagecheck-au-v3';
 const APP_FILES = ['./', './index.html', './calculator.js', './app.js', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', (event) => {

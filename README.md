@@ -9,7 +9,7 @@ Current free version:
 - Hourly pay rate
 - Overnight shift support
 - Saved shift entries on the phone
-- Weekly, fortnightly, and monthly gross pay summaries
+- Weekly and fortnightly gross pay summaries
 - 14-day shift history viewable all at once
 - Offline support after first load
 

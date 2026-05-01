@@ -82,27 +82,9 @@ function addDays(date, days) {
 }
 
 function periodRange(anchorDate, periodType) {
-  const date = parseISODate(anchorDate);
-
-  if (periodType === 'monthly') {
-    const start = new Date(date.getFullYear(), date.getMonth(), 1);
-    const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-    return { start: toISODate(start), end: toISODate(end) };
-  }
-
-  const day = date.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  const weekStart = addDays(date, mondayOffset);
-
-  if (periodType === 'fortnightly') {
-    const referenceMonday = parseISODate('2026-01-05');
-    const daysSinceReference = Math.floor((weekStart - referenceMonday) / 86400000);
-    const weeksSinceReference = Math.floor(daysSinceReference / 7);
-    const fortnightStart = weeksSinceReference % 2 === 0 ? weekStart : addDays(weekStart, -7);
-    return { start: toISODate(fortnightStart), end: toISODate(addDays(fortnightStart, 13)) };
-  }
-
-  return { start: toISODate(weekStart), end: toISODate(addDays(weekStart, 6)) };
+  const start = parseISODate(anchorDate);
+  const days = periodType === 'weekly' ? 7 : 14;
+  return { start: toISODate(start), end: toISODate(addDays(start, days - 1)) };
 }
 
 function filterEntriesByRange(entries, start, end) {
