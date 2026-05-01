@@ -1,5 +1,8 @@
-const STORAGE_KEY = 'driver-hours-pay-entries-v1';
-const SETTINGS_KEY = 'driver-hours-pay-settings-v1';
+const STORAGE_KEY = 'wagecheck-au-entries-v1';
+const SETTINGS_KEY = 'wagecheck-au-settings-v1';
+const LEGACY_STORAGE_KEY = 'driver-hours-pay-entries-v1';
+const LEGACY_SETTINGS_KEY = 'driver-hours-pay-settings-v1';
+const FREE_HISTORY_DAYS = 14;
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -20,15 +23,21 @@ function minutesLabel(minutes) {
 }
 
 function loadEntries() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch (_) { return []; }
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY) || '[]';
+    return pruneEntriesToHistoryLimit(JSON.parse(saved), todayISO(), FREE_HISTORY_DAYS);
+  } catch (_) { return []; }
 }
 
-function saveEntries(entries) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+function saveEntries(entriesToSave) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(pruneEntriesToHistoryLimit(entriesToSave, todayISO(), FREE_HISTORY_DAYS)));
 }
 
 function loadSettings() {
-  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); } catch (_) { return {}; }
+  try {
+    const saved = localStorage.getItem(SETTINGS_KEY) || localStorage.getItem(LEGACY_SETTINGS_KEY) || '{}';
+    return JSON.parse(saved);
+  } catch (_) { return {}; }
 }
 
 function saveSettings() {
@@ -47,7 +56,7 @@ function applyDefaults() {
   document.querySelector('#date').value = todayISO();
   document.querySelector('#anchorDate').value = settings.anchorDate || todayISO();
   document.querySelector('#hourlyRate').value = settings.hourlyRate || '35.00';
-  document.querySelector('#periodType').value = settings.periodType || 'weekly';
+  document.querySelector('#periodType').value = settings.periodType || 'fortnightly';
 }
 
 function getFormShift() {
@@ -70,6 +79,7 @@ function addShift(event) {
     return;
   }
   entries.push(shift);
+  entries = pruneEntriesToHistoryLimit(entries, todayISO(), FREE_HISTORY_DAYS);
   entries.sort((a, b) => `${b.date} ${b.startTime}`.localeCompare(`${a.date} ${a.startTime}`));
   saveEntries(entries);
   saveSettings();
@@ -116,11 +126,20 @@ function renderSummary() {
   document.querySelector('#totalBreaks').textContent = minutesLabel(totals.shifts.reduce((sum, shift) => sum + shift.breakMinutes, 0));
 }
 
+function historyEntries() {
+  const range = historyRange(todayISO(), FREE_HISTORY_DAYS);
+  const selected = filterEntriesByHistoryRange(entries, todayISO(), FREE_HISTORY_DAYS)
+    .sort((a, b) => `${b.date} ${b.startTime}`.localeCompare(`${a.date} ${a.startTime}`));
+  return { range, selected };
+}
+
 function renderEntries() {
-  const { selected } = selectedEntries();
+  const { range, selected } = historyEntries();
   const list = document.querySelector('#entryList');
+  const label = document.querySelector('#historyRangeLabel');
+  if (label) label.textContent = `${range.start} to ${range.end}`;
   if (!selected.length) {
-    list.innerHTML = '<div class="empty">No shifts saved for this pay period yet.</div>';
+    list.innerHTML = '<div class="empty">No shifts saved in your free 14-day history yet.</div>';
     return;
   }
 

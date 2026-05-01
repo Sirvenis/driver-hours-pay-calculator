@@ -109,6 +109,22 @@ function filterEntriesByRange(entries, start, end) {
   return (entries || []).filter((entry) => entry.date >= start && entry.date <= end);
 }
 
+function historyRange(anchorDate, days = 14) {
+  const date = parseISODate(anchorDate);
+  const start = addDays(date, -(Math.max(1, cleanNumber(days, 14)) - 1));
+  return { start: toISODate(start), end: toISODate(date) };
+}
+
+function filterEntriesByHistoryRange(entries, anchorDate, days = 14) {
+  const range = historyRange(anchorDate, days);
+  return filterEntriesByRange(entries, range.start, range.end);
+}
+
+function pruneEntriesToHistoryLimit(entries, anchorDate, days = 14) {
+  const range = historyRange(anchorDate, days);
+  return (entries || []).filter((entry) => entry.date >= range.start && entry.date <= range.end);
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     calculateShift,
@@ -116,5 +132,8 @@ if (typeof module !== 'undefined') {
     minutesToHours,
     periodRange,
     filterEntriesByRange,
+    historyRange,
+    filterEntriesByHistoryRange,
+    pruneEntriesToHistoryLimit,
   };
 }

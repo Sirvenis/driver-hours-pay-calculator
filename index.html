@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#2563eb">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Driver Pay">
+  <meta name="apple-mobile-web-app-title" content="WageCheck AU">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Driver Hours & Pay App</title>
-  <meta name="description" content="Mobile app for company drivers to track work hours, breaks, hourly rate, and weekly, fortnightly, or monthly pay.">
+  <title>WageCheck AU — Shift & Pay Calculator</title>
+  <meta name="description" content="Australian mobile app for workers to track shifts, breaks, hourly rates, and expected weekly or fortnightly gross pay.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <style>
@@ -112,8 +112,8 @@
       <div class="title-row">
         <div class="icon">🕒</div>
         <div>
-          <h1>Driver Hours & Pay</h1>
-          <p class="subtitle">Company driver shift and pay tracker</p>
+          <h1>WageCheck AU</h1>
+          <p class="subtitle">Australian shift and gross pay tracker</p>
         </div>
       </div>
       <button id="installButton" class="install" hidden>Install App</button>
@@ -121,6 +121,7 @@
 
     <section class="card">
       <h2>Pay Period Summary</h2>
+      <p class="hint">Free version shows gross pay estimates. Australian PAYG tax table support is planned for paid upgrades.</p>
       <div class="grid">
         <div>
           <label for="periodType">Pay period</label>
@@ -153,7 +154,7 @@
           <div><label for="startTime">Start time</label><input id="startTime" type="time" value="07:00" required></div>
           <div><label for="finishTime">Finish time</label><input id="finishTime" type="time" value="17:00" required></div>
           <div><label for="breakMinutes">Breaks, minutes</label><input id="breakMinutes" type="number" inputmode="numeric" min="0" value="30"></div>
-          <div><label for="note">Note, optional</label><input id="note" type="text" placeholder="Depot, route, etc."></div>
+          <div><label for="note">Note, optional</label><input id="note" type="text" placeholder="Job, site, shift, etc."></div>
         </div>
         <div class="preview">
           <div class="result"><div id="previewHours" class="value">0h</div><div class="label-text">This shift hours</div></div>
@@ -168,12 +169,13 @@
     </section>
 
     <section class="card">
-      <h2>Saved Shifts</h2>
+      <h2>14-Day Shift History</h2>
+      <p class="range" id="historyRangeLabel">-</p>
       <div id="entryList"></div>
-      <p class="hint">Tip: choose Weekly, Fortnightly, or Monthly above to view the matching saved shifts and total pay.</p>
+      <p class="hint">Free version keeps and shows your most recent 14 days of shifts all at once. Paid upgrades can add longer history, PAYG tax estimates, exports, and multiple jobs.</p>
     </section>
 
-    <footer>Driver Hours & Pay — offline mobile app</footer>
+    <footer>WageCheck AU — offline mobile app for Australian workers</footer>
   </main>
 
   <script src="calculator.js"></script>

@@ -4,6 +4,9 @@ const {
   calculateTotals,
   minutesToHours,
   periodRange,
+  historyRange,
+  filterEntriesByHistoryRange,
+  pruneEntriesToHistoryLimit,
 } = require('./calculator.js');
 
 function nearlyEqual(actual, expected, tolerance = 0.001) {
@@ -87,6 +90,36 @@ function testMinutesToHours() {
   nearlyEqual(minutesToHours(90), 1.5);
 }
 
+function testHistoryRangeDefaultsToFourteenDaysIncludingAnchorDate() {
+  const range = historyRange('2026-05-14');
+  assert.deepStrictEqual(range, { start: '2026-05-01', end: '2026-05-14' });
+}
+
+function testFilterEntriesByHistoryRangeShowsFourteenDaysOnly() {
+  const entries = [
+    { date: '2026-04-30', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+    { date: '2026-05-01', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+    { date: '2026-05-08', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+    { date: '2026-05-14', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+    { date: '2026-05-15', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+  ];
+
+  const selected = filterEntriesByHistoryRange(entries, '2026-05-14');
+  assert.deepStrictEqual(selected.map((entry) => entry.date), ['2026-05-01', '2026-05-08', '2026-05-14']);
+}
+
+function testPruneEntriesToFreeFourteenDayHistory() {
+  const entries = [
+    { date: '2026-04-30', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+    { date: '2026-05-01', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+    { date: '2026-05-14', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+    { date: '2026-05-15', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+  ];
+
+  const pruned = pruneEntriesToHistoryLimit(entries, '2026-05-14');
+  assert.deepStrictEqual(pruned.map((entry) => entry.date), ['2026-05-01', '2026-05-14']);
+}
+
 const tests = [
   testDayShiftWithBreak,
   testOvernightShift,
@@ -96,6 +129,9 @@ const tests = [
   testPeriodRangeFortnightly,
   testPeriodRangeMonthly,
   testMinutesToHours,
+  testHistoryRangeDefaultsToFourteenDaysIncludingAnchorDate,
+  testFilterEntriesByHistoryRangeShowsFourteenDaysOnly,
+  testPruneEntriesToFreeFourteenDayHistory,
 ];
 
 for (const test of tests) {
