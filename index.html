@@ -73,9 +73,13 @@
       box-shadow: 0 18px 45px rgba(0,0,0,.22);
     }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .break-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; }
-    .break-grid h3 { grid-column: 1 / -1; margin: 8px 0 0; font-size: .95rem; }
-    .break-grid .hint { grid-column: 1 / -1; margin-top: 0; }
+    .break-grid { display: grid; gap: 10px; margin-top: 10px; }
+    .break-grid h3 { margin: 8px 0 0; font-size: .95rem; }
+    .break-grid .hint { margin-top: 0; }
+    .break-rows { display: grid; gap: 10px; }
+    .break-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; }
+    .remove-break { background: transparent; border: 1px solid #7f1d1d; color: #fca5a5; border-radius: 10px; padding: 10px 12px; min-height: 48px; }
+    .add-break { width: 100%; }
     label { display: block; color: var(--muted); font-size: .8rem; margin: 0 0 6px; }
     input, select {
       width: 100%;
@@ -109,6 +113,7 @@
     .empty { color: var(--muted); text-align: center; padding: 24px 8px; border: 1px dashed var(--line); border-radius: 16px; }
     .hint { color: var(--muted); font-size: .84rem; line-height: 1.45; margin: 10px 0 0; }
     footer { text-align: center; color: #61728b; font-size: .78rem; padding: 10px 0 20px; }
+    @media (max-width: 520px) { .break-row { grid-template-columns: 1fr; } .remove-break { width: 100%; } }
     @media (max-width: 390px) { .grid, .summary, .preview, .actions { grid-template-columns: 1fr; } .value { font-size: 1.38rem; } }
   </style>
 </head>
@@ -171,25 +176,15 @@
         </div>
         <div class="break-grid">
           <h3>Detailed breaks, paid upgrade preview</h3>
-          <p class="hint">Add actual break start and finish times when an employer needs detailed records. Mark each break as unpaid or paid. WageCheck subtracts only unpaid breaks from pay, while paid breaks stay in paid hours.</p>
-          <div><label for="break1Start">Break 1 start</label><input id="break1Start" class="break-start" type="time"></div>
-          <div><label for="break1Finish">Break 1 finish</label><input id="break1Finish" class="break-finish" type="time"></div>
-          <div><label for="break1Paid">Break 1 type</label><select id="break1Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
-          <div><label for="break2Start">Break 2 start</label><input id="break2Start" class="break-start" type="time"></div>
-          <div><label for="break2Finish">Break 2 finish</label><input id="break2Finish" class="break-finish" type="time"></div>
-          <div><label for="break2Paid">Break 2 type</label><select id="break2Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
-          <div><label for="break3Start">Break 3 start</label><input id="break3Start" class="break-start" type="time"></div>
-          <div><label for="break3Finish">Break 3 finish</label><input id="break3Finish" class="break-finish" type="time"></div>
-          <div><label for="break3Paid">Break 3 type</label><select id="break3Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
-          <div><label for="break4Start">Break 4 start</label><input id="break4Start" class="break-start" type="time"></div>
-          <div><label for="break4Finish">Break 4 finish</label><input id="break4Finish" class="break-finish" type="time"></div>
-          <div><label for="break4Paid">Break 4 type</label><select id="break4Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
-          <div><label for="break5Start">Break 5 start</label><input id="break5Start" class="break-start" type="time"></div>
-          <div><label for="break5Finish">Break 5 finish</label><input id="break5Finish" class="break-finish" type="time"></div>
-          <div><label for="break5Paid">Break 5 type</label><select id="break5Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
-          <div><label for="break6Start">Break 6 start</label><input id="break6Start" class="break-start" type="time"></div>
-          <div><label for="break6Finish">Break 6 finish</label><input id="break6Finish" class="break-finish" type="time"></div>
-          <div><label for="break6Paid">Break 6 type</label><select id="break6Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
+          <p class="hint">Add actual break start and finish times when an employer needs detailed records. Mark each break as unpaid or paid. Use + if you need another break.</p>
+          <div id="breakRows" class="break-rows">
+            <div class="break-row">
+              <div><label for="break1Start">Break 1 start</label><input id="break1Start" class="break-start" type="time"></div>
+              <div><label for="break1Finish">Break 1 finish</label><input id="break1Finish" class="break-finish" type="time"></div>
+              <div><label for="break1Paid">Break 1 type</label><select id="break1Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
+            </div>
+          </div>
+          <button id="addBreakRow" class="secondary add-break" type="button">+ Add another break</button>
         </div>
         <div class="preview">
           <div class="result"><div id="previewHours" class="value">0h</div><div class="label-text">This shift hours</div></div>

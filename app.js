@@ -45,20 +45,55 @@ function loadSettings() {
   } catch (_) { return {}; }
 }
 
-function getBreakRows() {
-  return Array.from({ length: 6 }, (_, index) => {
+function breakRowTemplate(number, removable = true) {
+  return `
+    <div class="break-row">
+      <div><label for="break${number}Start">Break ${number} start</label><input id="break${number}Start" class="break-start" type="time"></div>
+      <div><label for="break${number}Finish">Break ${number} finish</label><input id="break${number}Finish" class="break-finish" type="time"></div>
+      <div><label for="break${number}Paid">Break ${number} type</label><select id="break${number}Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
+      ${removable ? '<button class="remove-break" type="button" aria-label="Remove break">Remove</button>' : ''}
+    </div>`;
+}
+
+function renumberBreakRows() {
+  document.querySelectorAll('#breakRows .break-row').forEach((row, index) => {
     const number = index + 1;
-    return {
-      startTime: document.querySelector(`#break${number}Start`).value,
-      finishTime: document.querySelector(`#break${number}Finish`).value,
-      paid: document.querySelector(`#break${number}Paid`).value === 'paid',
-    };
-  }).filter((breakRow) => breakRow.startTime || breakRow.finishTime);
+    const start = row.querySelector('.break-start');
+    const finish = row.querySelector('.break-finish');
+    const paid = row.querySelector('.break-paid');
+    const labels = row.querySelectorAll('label');
+    start.id = `break${number}Start`;
+    finish.id = `break${number}Finish`;
+    paid.id = `break${number}Paid`;
+    labels[0].setAttribute('for', start.id);
+    labels[0].textContent = `Break ${number} start`;
+    labels[1].setAttribute('for', finish.id);
+    labels[1].textContent = `Break ${number} finish`;
+    labels[2].setAttribute('for', paid.id);
+    labels[2].textContent = `Break ${number} type`;
+    const removeButton = row.querySelector('.remove-break');
+    if (removeButton) removeButton.hidden = index === 0;
+  });
+}
+
+function addBreakRow() {
+  const breakRows = document.querySelector('#breakRows');
+  const number = breakRows.querySelectorAll('.break-row').length + 1;
+  breakRows.insertAdjacentHTML('beforeend', breakRowTemplate(number, true));
+  renumberBreakRows();
+}
+
+function getBreakRows() {
+  return Array.from(document.querySelectorAll('#breakRows .break-row')).map((row) => ({
+    startTime: row.querySelector('.break-start').value,
+    finishTime: row.querySelector('.break-finish').value,
+    paid: row.querySelector('.break-paid').value === 'paid',
+  })).filter((breakRow) => breakRow.startTime || breakRow.finishTime);
 }
 
 function clearBreakRows() {
-  document.querySelectorAll('.break-start, .break-finish').forEach((input) => { input.value = ''; });
-  document.querySelectorAll('.break-paid').forEach((select) => { select.value = 'unpaid'; });
+  const breakRows = document.querySelector('#breakRows');
+  breakRows.innerHTML = breakRowTemplate(1, false);
 }
 
 function formatBreakRows(breaks) {
@@ -250,11 +285,26 @@ async function loadPaygTables() {
 }
 
 applyDefaults();
+renumberBreakRows();
 document.querySelector('#shiftForm').addEventListener('submit', addShift);
 document.querySelector('#duplicateLast').addEventListener('click', duplicateLast);
 document.querySelector('#clearAll').addEventListener('click', clearAll);
-document.querySelectorAll('input, select').forEach((el) => el.addEventListener('input', render));
-document.querySelectorAll('input, select').forEach((el) => el.addEventListener('change', render));
+document.querySelector('#addBreakRow').addEventListener('click', () => {
+  addBreakRow();
+  render();
+});
+document.querySelector('#breakRows').addEventListener('click', (event) => {
+  if (!event.target.classList.contains('remove-break')) return;
+  event.target.closest('.break-row').remove();
+  renumberBreakRows();
+  render();
+});
+document.addEventListener('input', (event) => {
+  if (event.target.matches('input, select')) render();
+});
+document.addEventListener('change', (event) => {
+  if (event.target.matches('input, select')) render();
+});
 installAppPrompt();
 registerServiceWorker();
 loadPaygTables().then(render).catch(() => render());
