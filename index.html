@@ -215,24 +215,6 @@
     </section>
 
     <section class="card">
-      <h2>Send Timesheet</h2>
-      <p class="hint">Create a timesheet for the selected pay period. Email opens your mail app; Share uses your phone share sheet when available.</p>
-      <div class="grid">
-        <div><label for="workerName">Worker name, optional</label><input id="workerName" type="text" placeholder="Your name"></div>
-        <div><label for="employerName">Employer/site, optional</label><input id="employerName" type="text" placeholder="Depot, client, employer"></div>
-        <div><label for="payOfficeEmail">Pay office email, optional</label><input id="payOfficeEmail" type="email" placeholder="payoffice@example.com"></div>
-      </div>
-      <div class="timesheet-actions">
-        <button id="emailTimesheet" class="secondary" type="button">Email Timesheet</button>
-        <button id="shareTimesheet" class="secondary" type="button">Share</button>
-        <button id="copyTimesheet" class="secondary" type="button">Copy Text</button>
-        <button id="downloadTimesheetCsv" class="secondary" type="button">Download CSV</button>
-        <button id="printTimesheet" class="secondary" type="button">Print / Save PDF</button>
-      </div>
-      <p class="hint" id="timesheetStatus">Uses shifts inside the selected pay period above.</p>
-    </section>
-
-    <section class="card">
       <h2>Payslip Comparison</h2>
       <p class="hint">Enter the actual figures from your payslip and compare them with the selected pay period estimate. Super defaults to 12% of gross pay.</p>
       <div class="grid">
@@ -250,6 +232,24 @@
       <p class="range" id="historyRangeLabel">-</p>
       <div id="entryList"></div>
       <p class="hint">Free version keeps and shows your most recent 14 days of shifts all at once. Paid upgrades can add longer history, exports, multiple jobs, and payslip comparison.</p>
+    </section>
+
+    <section class="card">
+      <h2>Send Timesheet</h2>
+      <p class="hint">Create a timesheet for the selected pay period. Email opens your mail app; Share uses your phone share sheet when available.</p>
+      <div class="grid">
+        <div><label for="workerName">Worker name, optional</label><input id="workerName" type="text" placeholder="Your name"></div>
+        <div><label for="employerName">Employer/site, optional</label><input id="employerName" type="text" placeholder="Depot, client, employer"></div>
+        <div><label for="payOfficeEmail">Pay office email, optional</label><input id="payOfficeEmail" type="email" placeholder="payoffice@example.com"></div>
+      </div>
+      <div class="timesheet-actions">
+        <button id="emailTimesheet" class="secondary" type="button">Email Timesheet</button>
+        <button id="shareTimesheet" class="secondary" type="button">Share</button>
+        <button id="copyTimesheet" class="secondary" type="button">Copy Text</button>
+        <button id="downloadTimesheetCsv" class="secondary" type="button">Download CSV</button>
+        <button id="printTimesheet" class="secondary" type="button">Print / Save PDF</button>
+      </div>
+      <p class="hint" id="timesheetStatus">Uses shifts inside the selected pay period above.</p>
     </section>
 
     <footer>WageCheck AU — offline mobile app for Australian workers</footer>
