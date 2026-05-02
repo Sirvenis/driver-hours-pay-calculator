@@ -82,6 +82,23 @@
       margin: 14px 0;
       box-shadow: 0 18px 45px rgba(0,0,0,.22);
     }
+    details.card { padding: 0; overflow: hidden; }
+    details.card > summary {
+      list-style: none;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 16px;
+      cursor: pointer;
+      font-weight: 950;
+    }
+    details.card > summary::-webkit-details-marker { display: none; }
+    details.card > summary::after { content: '▾'; color: var(--blue); font-size: 1.1rem; transition: transform .15s ease; }
+    details.card[open] > summary::after { transform: rotate(180deg); }
+    details.card > summary small { display: block; color: var(--muted); font-size: .78rem; font-weight: 650; margin-top: 4px; }
+    details.card > :not(summary) { margin-left: 16px; margin-right: 16px; }
+    details.card > :last-child { margin-bottom: 16px; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .break-grid { display: grid; gap: 10px; margin-top: 10px; }
     .break-grid h3 { margin: 8px 0 0; font-size: .95rem; }
@@ -194,72 +211,6 @@
     </section>
 
     <section class="card">
-      <h2>Pro Beta: One-Click Shift Timer</h2>
-      <p class="hint">Locked upgrade feature for trial/beta users. Tap Start, Break, Resume, and Finish to stamp times automatically, then edit anything manually before saving.</p>
-      <div id="timerLocked" class="locked-panel">
-        <strong>Locked until trial/update access is enabled.</strong>
-        <p class="hint">This public app does not ship with paid features unlocked. Enter a private beta access code only if Andrew has given you one.</p>
-        <div class="grid">
-          <div><label for="betaAccessCode">Beta access code</label><input id="betaAccessCode" type="password" autocomplete="one-time-code" placeholder="Private code"></div>
-          <div><label>&nbsp;</label><button id="unlockBeta" class="secondary" type="button">Unlock on this device</button></div>
-        </div>
-        <p class="hint" id="accessStatus">Public sharing stays locked by default.</p>
-      </div>
-      <div id="timerUnlocked" class="timer-panel" hidden>
-        <div class="timer-status" id="timerStatus">Timer ready.</div>
-        <div class="timer-actions">
-          <button id="timerStart" class="primary timer-primary" type="button">Start Shift</button>
-          <button id="timerBreak" class="secondary timer-break" type="button">Start Break</button>
-          <button id="timerResume" class="secondary" type="button">Resume</button>
-          <button id="timerFinish" class="secondary timer-finish" type="button">Finish Shift</button>
-        </div>
-        <label class="check-row" for="timerBreakPaid"><input id="timerBreakPaid" type="checkbox"> Current break is paid</label>
-        <label class="check-row" for="recordLocation"><input id="recordLocation" type="checkbox"> Record GPS location with Start / Break / Resume / Finish</label>
-        <button id="timerSaveToForm" class="primary" type="button">Copy Timer Times Into Form</button>
-        <button id="timerClear" class="secondary" type="button">Clear Active Timer</button>
-        <div id="timerLocations" class="location-list"></div>
-        <p class="hint">Timer data is stored only on this device. Location recording is optional, off by default, and only used when you choose to share or save it.</p>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Fatigue Warning Assistant</h2>
-      <p class="hint">Simple safety reminders only — not an official fatigue-management system, legal logbook, or compliance advice.</p>
-      <label class="check-row" for="fatigueWarningsEnabled"><input id="fatigueWarningsEnabled" type="checkbox"> Show simple fatigue warnings</label>
-      <div id="fatigueWarnings"></div>
-    </section>
-
-    <section class="card">
-      <h2>Emergency / Breakdown Location</h2>
-      <p class="hint">Creates a GPS message you can send via your phone's share sheet, SMS, email, or copy/paste. It does not silently send your location.</p>
-      <div class="grid">
-        <div><label for="emergencyContactPhone">Emergency phone, optional</label><input id="emergencyContactPhone" type="tel" placeholder="Mobile number"></div>
-        <div><label for="emergencyContactEmail">Emergency email, optional</label><input id="emergencyContactEmail" type="email" placeholder="email@example.com"></div>
-        <div><label for="emergencyNote">Emergency note, optional</label><input id="emergencyNote" type="text" placeholder="Breakdown, flat tyre, working alone..."></div>
-        <div><label>&nbsp;</label><button id="getEmergencyLocation" class="secondary" type="button">Get Current GPS</button></div>
-      </div>
-      <div id="emergencyStatus" class="status-banner">Location is only captured when you tap the button.</div>
-      <div class="emergency-actions">
-        <button id="shareEmergencyLocation" class="secondary" type="button">Share Location</button>
-        <button id="smsEmergencyLocation" class="secondary" type="button">SMS Location</button>
-        <button id="emailEmergencyLocation" class="secondary" type="button">Email Location</button>
-        <button id="copyEmergencyLocation" class="secondary" type="button">Copy Message</button>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Help / More</h2>
-      <p class="hint">Share the free app, read the quick guide, request upgrade/beta access, or send suggestions.</p>
-      <div class="link-actions">
-        <button id="shareFreeApp" class="secondary" type="button">Share Free App</button>
-        <a class="link-button" href="https://sirvenis.github.io/wagecheck-au/" target="_blank" rel="noopener">Instructions</a>
-        <a class="link-button" href="https://sirvenis.github.io/wagecheck-au/#upgrade" target="_blank" rel="noopener">Upgrade / Beta</a>
-        <a class="link-button" href="mailto:ajsavenis@gmail.com?subject=WageCheck%20AU%20Suggestion" target="_blank" rel="noopener">Suggestions</a>
-      </div>
-      <p class="hint" id="shareStatus">Free app link: https://sirvenis.github.io/driver-hours-pay-calculator/</p>
-    </section>
-
-    <section class="card">
       <h2>Add Shift</h2>
       <form id="shiftForm">
         <div class="grid">
@@ -335,13 +286,79 @@
       <p class="hint" id="timesheetStatus">Uses shifts inside the selected pay period above.</p>
     </section>
 
+    <details class="card compact-card">
+      <summary><span>Pro Beta: One-Click Shift Timer</span><small>Optional beta tool — collapsed by default</small></summary>
+      <p class="hint">Locked upgrade feature for trial/beta users. Tap Start, Break, Resume, and Finish to stamp times automatically, then edit anything manually before saving.</p>
+      <div id="timerLocked" class="locked-panel">
+        <strong>Locked until trial/update access is enabled.</strong>
+        <p class="hint">This public app does not ship with paid features unlocked. Enter a private beta access code only if Andrew has given you one.</p>
+        <div class="grid">
+          <div><label for="betaAccessCode">Beta access code</label><input id="betaAccessCode" type="password" autocomplete="one-time-code" placeholder="Private code"></div>
+          <div><label>&nbsp;</label><button id="unlockBeta" class="secondary" type="button">Unlock on this device</button></div>
+        </div>
+        <p class="hint" id="accessStatus">Public sharing stays locked by default.</p>
+      </div>
+      <div id="timerUnlocked" class="timer-panel" hidden>
+        <div class="timer-status" id="timerStatus">Timer ready.</div>
+        <div class="timer-actions">
+          <button id="timerStart" class="primary timer-primary" type="button">Start Shift</button>
+          <button id="timerBreak" class="secondary timer-break" type="button">Start Break</button>
+          <button id="timerResume" class="secondary" type="button">Resume</button>
+          <button id="timerFinish" class="secondary timer-finish" type="button">Finish Shift</button>
+        </div>
+        <label class="check-row" for="timerBreakPaid"><input id="timerBreakPaid" type="checkbox"> Current break is paid</label>
+        <label class="check-row" for="recordLocation"><input id="recordLocation" type="checkbox"> Record GPS location with Start / Break / Resume / Finish</label>
+        <button id="timerSaveToForm" class="primary" type="button">Copy Timer Times Into Form</button>
+        <button id="timerClear" class="secondary" type="button">Clear Active Timer</button>
+        <div id="timerLocations" class="location-list"></div>
+        <p class="hint">Timer data is stored only on this device. Location recording is optional, off by default, and only used when you choose to share or save it.</p>
+      </div>
+    </details>
+
+    <details class="card compact-card">
+      <summary><span>Fatigue Warning Assistant</span><small>Optional simple reminders</small></summary>
+      <p class="hint">Simple safety reminders only — not an official fatigue-management system, legal logbook, or compliance advice.</p>
+      <label class="check-row" for="fatigueWarningsEnabled"><input id="fatigueWarningsEnabled" type="checkbox"> Show simple fatigue warnings</label>
+      <div id="fatigueWarnings"></div>
+    </details>
+
+    <details class="card compact-card">
+      <summary><span>Emergency / Breakdown Location</span><small>Optional GPS share tools</small></summary>
+      <p class="hint">Creates a GPS message you can send via your phone's share sheet, SMS, email, or copy/paste. It does not silently send your location.</p>
+      <div class="grid">
+        <div><label for="emergencyContactPhone">Emergency phone, optional</label><input id="emergencyContactPhone" type="tel" placeholder="Mobile number"></div>
+        <div><label for="emergencyContactEmail">Emergency email, optional</label><input id="emergencyContactEmail" type="email" placeholder="email@example.com"></div>
+        <div><label for="emergencyNote">Emergency note, optional</label><input id="emergencyNote" type="text" placeholder="Breakdown, flat tyre, working alone..."></div>
+        <div><label>&nbsp;</label><button id="getEmergencyLocation" class="secondary" type="button">Get Current GPS</button></div>
+      </div>
+      <div id="emergencyStatus" class="status-banner">Location is only captured when you tap the button.</div>
+      <div class="emergency-actions">
+        <button id="shareEmergencyLocation" class="secondary" type="button">Share Location</button>
+        <button id="smsEmergencyLocation" class="secondary" type="button">SMS Location</button>
+        <button id="emailEmergencyLocation" class="secondary" type="button">Email Location</button>
+        <button id="copyEmergencyLocation" class="secondary" type="button">Copy Message</button>
+      </div>
+    </details>
+
+    <details class="card compact-card">
+      <summary><span>Help / More</span><small>Instructions, sharing, feedback</small></summary>
+      <p class="hint">Share the free app, read the quick guide, request upgrade/beta access, or send suggestions.</p>
+      <div class="link-actions">
+        <button id="shareFreeApp" class="secondary" type="button">Share Free App</button>
+        <a class="link-button" href="https://sirvenis.github.io/wagecheck-au/" target="_blank" rel="noopener">Instructions</a>
+        <a class="link-button" href="https://sirvenis.github.io/wagecheck-au/#upgrade" target="_blank" rel="noopener">Upgrade / Beta</a>
+        <a class="link-button" href="mailto:ajsavenis@gmail.com?subject=WageCheck%20AU%20Suggestion" target="_blank" rel="noopener">Suggestions</a>
+      </div>
+      <p class="hint" id="shareStatus">Free app link: https://sirvenis.github.io/driver-hours-pay-calculator/</p>
+    </details>
+
     <footer>WageCheck AU — offline mobile app for Australian workers</footer>
   </main>
 
-  <script src="calculator.js?v=19"></script>
-  <script src="timesheet.js?v=19"></script>
-  <script src="payslip.js?v=19"></script>
-  <script src="payg.js?v=19"></script>
-  <script src="app.js?v=19"></script>
+  <script src="calculator.js?v=20"></script>
+  <script src="timesheet.js?v=20"></script>
+  <script src="payslip.js?v=20"></script>
+  <script src="payg.js?v=20"></script>
+  <script src="app.js?v=20"></script>
 </body>
 </html>
