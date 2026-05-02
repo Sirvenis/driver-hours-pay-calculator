@@ -135,6 +135,8 @@ function saveSettings() {
     periodType: document.querySelector('#periodType').value,
     anchorDate: document.querySelector('#anchorDate').value,
     taxFreeThreshold: document.querySelector('#taxFreeThreshold').checked,
+    workerName: document.querySelector('#workerName').value.trim(),
+    payOfficeEmail: document.querySelector('#payOfficeEmail').value.trim(),
   };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
@@ -148,6 +150,8 @@ function applyDefaults() {
   document.querySelector('#hourlyRate').value = settings.hourlyRate || '35.00';
   document.querySelector('#periodType').value = settings.periodType || 'fortnightly';
   document.querySelector('#taxFreeThreshold').checked = settings.taxFreeThreshold !== false;
+  document.querySelector('#workerName').value = settings.workerName || '';
+  document.querySelector('#payOfficeEmail').value = settings.payOfficeEmail || '';
 }
 
 function getFormShift() {
@@ -273,12 +277,91 @@ function updatePreview() {
   document.querySelector('#previewPay').textContent = money(preview.grossPay);
 }
 
+function currentTimesheetPayload() {
+  const { range, selected } = selectedEntries();
+  return {
+    range,
+    entries: selected,
+    workerName: document.querySelector('#workerName').value.trim(),
+    employer: '',
+  };
+}
+
+function currentTimesheetText() {
+  return buildTimesheetText(currentTimesheetPayload());
+}
+
+function currentTimesheetCsv() {
+  return buildTimesheetCsv(currentTimesheetPayload());
+}
+
+function updateTimesheetStatus(message) {
+  const { selected } = selectedEntries();
+  document.querySelector('#timesheetStatus').textContent = message || `${selected.length} shift${selected.length === 1 ? '' : 's'} in the selected pay period.`;
+}
+
+function emailTimesheet() {
+  const { selected, range } = selectedEntries();
+  if (!selected.length) {
+    updateTimesheetStatus('No shifts in the selected pay period to send.');
+    return;
+  }
+  saveSettings();
+  const email = document.querySelector('#payOfficeEmail').value.trim();
+  const subject = `Timesheet ${range.start} to ${range.end}`;
+  const body = currentTimesheetText();
+  window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  updateTimesheetStatus('Opening your email app with the timesheet text.');
+}
+
+async function shareTimesheet() {
+  const { selected, range } = selectedEntries();
+  if (!selected.length) {
+    updateTimesheetStatus('No shifts in the selected pay period to share.');
+    return;
+  }
+  const text = currentTimesheetText();
+  if (navigator.share) {
+    await navigator.share({ title: `Timesheet ${range.start} to ${range.end}`, text });
+    updateTimesheetStatus('Timesheet shared.');
+    return;
+  }
+  await navigator.clipboard.writeText(text);
+  updateTimesheetStatus('Share sheet is unavailable here, so the timesheet was copied instead.');
+}
+
+async function copyTimesheet() {
+  const { selected } = selectedEntries();
+  if (!selected.length) {
+    updateTimesheetStatus('No shifts in the selected pay period to copy.');
+    return;
+  }
+  await navigator.clipboard.writeText(currentTimesheetText());
+  updateTimesheetStatus('Timesheet copied. Paste it into email, SMS, WhatsApp, or your work app.');
+}
+
+function downloadTimesheetCsv() {
+  const { selected, range } = selectedEntries();
+  if (!selected.length) {
+    updateTimesheetStatus('No shifts in the selected pay period to download.');
+    return;
+  }
+  const blob = new Blob([currentTimesheetCsv()], { type: 'text/csv;charset=utf-8' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `wagecheck-timesheet-${range.start}-to-${range.end}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  updateTimesheetStatus('CSV timesheet downloaded.');
+}
+
 function render() {
   updateBreakDurations();
   saveSettings();
   renderSummary();
   renderEntries();
   updatePreview();
+  updateTimesheetStatus();
 }
 
 function installAppPrompt() {
@@ -315,6 +398,10 @@ renumberBreakRows();
 document.querySelector('#shiftForm').addEventListener('submit', addShift);
 document.querySelector('#duplicateLast').addEventListener('click', duplicateLast);
 document.querySelector('#clearAll').addEventListener('click', clearAll);
+document.querySelector('#emailTimesheet').addEventListener('click', emailTimesheet);
+document.querySelector('#shareTimesheet').addEventListener('click', () => shareTimesheet().catch(() => updateTimesheetStatus('Unable to share this timesheet. Try Copy Text instead.')));
+document.querySelector('#copyTimesheet').addEventListener('click', () => copyTimesheet().catch(() => updateTimesheetStatus('Unable to copy automatically. Try Email Timesheet instead.')));
+document.querySelector('#downloadTimesheetCsv').addEventListener('click', downloadTimesheetCsv);
 document.querySelector('#addBreakRow').addEventListener('click', () => {
   addBreakRow();
   render();

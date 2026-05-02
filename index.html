@@ -110,7 +110,7 @@
     .label-text, .muted { color: var(--muted); font-size: .78rem; margin-top: 6px; }
     .range { color: #bfdbfe; font-size: .86rem; margin: -5px 0 12px; }
     .preview { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
-    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .actions, .timesheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
     .entry { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; background: #07111f; border: 1px solid var(--line); border-radius: 17px; padding: 13px; margin: 10px 0; }
     .entry-pay { color: var(--green); font-weight: 950; text-align: right; font-size: 1.08rem; }
     .entry-right { text-align: right; }
@@ -120,7 +120,7 @@
     .hint { color: var(--muted); font-size: .84rem; line-height: 1.45; margin: 10px 0 0; }
     footer { text-align: center; color: #61728b; font-size: .78rem; padding: 10px 0 20px; }
     @media (max-width: 390px) { .break-row { grid-template-columns: 28px 1fr 1fr 62px 30px; gap: 4px; } .break-number { font-size: .74rem; } .break-row input { font-size: .86rem; padding: 8px 4px; } .break-duration { font-size: .78rem; padding: 8px 3px; } }
-    @media (max-width: 390px) { .grid, .summary, .preview, .actions { grid-template-columns: 1fr; } .value { font-size: 1.38rem; } }
+    @media (max-width: 390px) { .grid, .summary, .preview, .actions, .timesheet-actions { grid-template-columns: 1fr; } .value { font-size: 1.38rem; } }
   </style>
 </head>
 <body>
@@ -205,6 +205,22 @@
     </section>
 
     <section class="card">
+      <h2>Send Timesheet</h2>
+      <p class="hint">Create a timesheet for the selected pay period. Email opens your mail app; Share uses your phone share sheet when available.</p>
+      <div class="grid">
+        <div><label for="workerName">Worker name, optional</label><input id="workerName" type="text" placeholder="Your name"></div>
+        <div><label for="payOfficeEmail">Pay office email, optional</label><input id="payOfficeEmail" type="email" placeholder="payoffice@example.com"></div>
+      </div>
+      <div class="timesheet-actions">
+        <button id="emailTimesheet" class="secondary" type="button">Email Timesheet</button>
+        <button id="shareTimesheet" class="secondary" type="button">Share</button>
+        <button id="copyTimesheet" class="secondary" type="button">Copy Text</button>
+        <button id="downloadTimesheetCsv" class="secondary" type="button">Download CSV</button>
+      </div>
+      <p class="hint" id="timesheetStatus">Uses shifts inside the selected pay period above.</p>
+    </section>
+
+    <section class="card">
       <h2>14-Day Shift History</h2>
       <p class="range" id="historyRangeLabel">-</p>
       <div id="entryList"></div>
@@ -215,6 +231,7 @@
   </main>
 
   <script src="calculator.js"></script>
+  <script src="timesheet.js"></script>
   <script src="payg.js"></script>
   <script src="app.js"></script>
 </body>
