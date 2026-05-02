@@ -96,6 +96,36 @@ function testTimedBreaksFallbackToLegacyBreakMinutesWhenNoBreakRowsProvided() {
   assert.strictEqual(result.paidMinutes, 570);
 }
 
+
+function testDurationOnlyBreaksAreSubtractedWithoutStrictTimes() {
+  const result = calculateShift({
+    date: '2026-04-30',
+    startTime: '07:00',
+    finishTime: '17:00',
+    breaks: [{ durationMinutes: 30, paid: false }],
+    hourlyRate: 35,
+  });
+
+  assert.strictEqual(result.breakMinutes, 30);
+  assert.strictEqual(result.paidBreakMinutes, 0);
+  assert.strictEqual(result.totalBreakMinutes, 30);
+  assert.strictEqual(result.paidMinutes, 570);
+}
+
+function testTimedBreakOverridesEditableDurationWhenBothTimesProvided() {
+  const result = calculateShift({
+    date: '2026-04-30',
+    startTime: '07:00',
+    finishTime: '17:00',
+    breaks: [{ durationMinutes: 45, startTime: '12:00', finishTime: '12:30', paid: false }],
+    hourlyRate: 35,
+  });
+
+  assert.strictEqual(result.breakMinutes, 30);
+  assert.strictEqual(result.totalBreakMinutes, 30);
+  assert.strictEqual(result.paidMinutes, 570);
+}
+
 function testPaidTimedBreaksAreNotSubtractedFromShiftPay() {
   const result = calculateShift({
     date: '2026-04-30',
@@ -291,6 +321,8 @@ const tests = [
   testBreakCannotMakeNegativePay,
   testMultipleTimedBreaksAreSubtractedFromShiftPay,
   testTimedBreaksFallbackToLegacyBreakMinutesWhenNoBreakRowsProvided,
+  testDurationOnlyBreaksAreSubtractedWithoutStrictTimes,
+  testTimedBreakOverridesEditableDurationWhenBothTimesProvided,
   testPaidTimedBreaksAreNotSubtractedFromShiftPay,
   testTimedBreakRowsDefaultToUnpaidForBackwardCompatibility,
   testOvernightTimedBreakCanCrossMidnight,

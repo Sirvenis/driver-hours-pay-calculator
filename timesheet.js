@@ -10,10 +10,11 @@ function csvEscape(value) {
 }
 
 function timesheetBreakMinutes(breakRow) {
-  if (!breakRow || !breakRow.startTime || !breakRow.finishTime) return 0;
+  if (!breakRow) return 0;
+  if (!breakRow.startTime || !breakRow.finishTime) return Math.max(0, Number(breakRow.durationMinutes) || 0);
   const [startHours, startMinutes] = breakRow.startTime.split(':').map(Number);
   const [finishHours, finishMinutes] = breakRow.finishTime.split(':').map(Number);
-  if (![startHours, startMinutes, finishHours, finishMinutes].every(Number.isFinite)) return 0;
+  if (![startHours, startMinutes, finishHours, finishMinutes].every(Number.isFinite)) return Math.max(0, Number(breakRow.durationMinutes) || 0);
   const start = startHours * 60 + startMinutes;
   let finish = finishHours * 60 + finishMinutes;
   if (finish < start) finish += 24 * 60;
@@ -21,11 +22,12 @@ function timesheetBreakMinutes(breakRow) {
 }
 
 function formatTimesheetBreaks(breaks) {
-  const validBreaks = (breaks || []).filter((breakRow) => breakRow.startTime && breakRow.finishTime);
-  if (!validBreaks.length) return 'No detailed breaks';
+  const validBreaks = (breaks || []).filter((breakRow) => (Number(breakRow.durationMinutes) || 0) > 0 || (breakRow.startTime && breakRow.finishTime));
+  if (!validBreaks.length) return 'No breaks recorded';
   return validBreaks.map((breakRow) => {
     const status = breakRow.paid === true ? 'paid' : 'unpaid';
-    return `${breakRow.startTime}-${breakRow.finishTime} ${status} ${timesheetMinutesLabel(timesheetBreakMinutes(breakRow))}`;
+    const timeLabel = breakRow.startTime && breakRow.finishTime ? `${breakRow.startTime}-${breakRow.finishTime} ` : '';
+    return `${timeLabel}${status} ${timesheetMinutesLabel(timesheetBreakMinutes(breakRow))}`;
   }).join('; ');
 }
 

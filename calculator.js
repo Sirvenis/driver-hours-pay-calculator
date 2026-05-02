@@ -15,7 +15,8 @@ function parseTimeToMinutes(time) {
 }
 
 function calculateTimedBreakMinutes(breakRow) {
-  if (!breakRow || !breakRow.startTime || !breakRow.finishTime) return 0;
+  if (!breakRow) return 0;
+  if (!breakRow.startTime || !breakRow.finishTime) return Math.max(0, cleanNumber(breakRow.durationMinutes));
   const startMinutes = parseTimeToMinutes(breakRow.startTime);
   let finishMinutes = parseTimeToMinutes(breakRow.finishTime);
   if (finishMinutes < startMinutes) {
@@ -25,7 +26,7 @@ function calculateTimedBreakMinutes(breakRow) {
 }
 
 function validTimedBreaks(breaks) {
-  return (breaks || []).filter((breakRow) => breakRow && breakRow.startTime && breakRow.finishTime);
+  return (breaks || []).filter((breakRow) => breakRow && ((breakRow.startTime && breakRow.finishTime) || cleanNumber(breakRow.durationMinutes) > 0));
 }
 
 function calculateBreakMinutes(breaks, fallbackBreakMinutes = 0) {

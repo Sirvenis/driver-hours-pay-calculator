@@ -10,6 +10,16 @@ function testFormatTimesheetBreaksShowsPaidAndUnpaidDurations() {
   assert.strictEqual(text, '09:00-09:15 paid 15m; 12:00-12:30 unpaid 30m');
 }
 
+
+function testFormatTimesheetBreaksSupportsDurationOnlyBreaks() {
+  const text = formatTimesheetBreaks([
+    { durationMinutes: 30, paid: false },
+    { durationMinutes: 10, paid: true },
+  ]);
+
+  assert.strictEqual(text, 'unpaid 30m; paid 10m');
+}
+
 function testBuildTimesheetTextIncludesPeriodRowsAndTotals() {
   const text = buildTimesheetText({
     range: { start: '2026-05-02', end: '2026-05-15' },
@@ -89,6 +99,7 @@ function testBuildTimesheetPrintHtmlIncludesPrintableTableAndTotals() {
 
 const tests = [
   testFormatTimesheetBreaksShowsPaidAndUnpaidDurations,
+  testFormatTimesheetBreaksSupportsDurationOnlyBreaks,
   testBuildTimesheetTextIncludesPeriodRowsAndTotals,
   testBuildTimesheetCsvEscapesNotesAndIncludesRows,
   testBuildTimesheetPrintHtmlIncludesPrintableTableAndTotals,

@@ -77,12 +77,13 @@
     .break-grid h3 { margin: 8px 0 0; font-size: .95rem; }
     .break-grid .hint { margin-top: 0; }
     .break-rows { display: grid; gap: 8px; }
-    .break-row { display: grid; grid-template-columns: 34px 1fr 1fr 74px 34px; gap: 6px; align-items: center; }
+    .break-row { display: grid; grid-template-columns: 34px 82px 82px 1fr 1fr 34px; gap: 6px; align-items: center; }
     .break-number { color: var(--muted); font-weight: 850; font-size: .82rem; text-align: center; }
     .break-row input { min-height: 40px; padding: 8px 7px; border-radius: 11px; font-size: .93rem; }
-    .break-duration { border: 1px solid var(--line); background: #07111f; border-radius: 11px; min-height: 40px; padding: 8px 5px; font-weight: 950; font-size: .86rem; }
-    .break-duration.paid { color: var(--green); border-color: rgba(34,197,94,.45); }
-    .break-duration.unpaid { color: var(--red); border-color: rgba(251,113,133,.45); }
+    .break-minutes { text-align: center; }
+    .break-status { border: 1px solid var(--line); background: #07111f; border-radius: 11px; min-height: 40px; padding: 8px 5px; font-weight: 950; font-size: .82rem; }
+    .break-status.paid { color: var(--green); border-color: rgba(34,197,94,.45); }
+    .break-status.unpaid { color: var(--red); border-color: rgba(251,113,133,.45); }
     .remove-break { background: transparent; border: 1px solid #7f1d1d; color: #fca5a5; border-radius: 10px; padding: 0; min-height: 40px; font-size: 1.05rem; }
     .add-break { width: 100%; }
     label { display: block; color: var(--muted); font-size: .8rem; margin: 0 0 6px; }
@@ -127,7 +128,7 @@
     .empty { color: var(--muted); text-align: center; padding: 24px 8px; border: 1px dashed var(--line); border-radius: 16px; }
     .hint { color: var(--muted); font-size: .84rem; line-height: 1.45; margin: 10px 0 0; }
     footer { text-align: center; color: #61728b; font-size: .78rem; padding: 10px 0 20px; }
-    @media (max-width: 390px) { .break-row { grid-template-columns: 28px 1fr 1fr 62px 30px; gap: 4px; } .break-number { font-size: .74rem; } .break-row input { font-size: .86rem; padding: 8px 4px; } .break-duration { font-size: .78rem; padding: 8px 3px; } }
+    @media (max-width: 390px) { .break-row { grid-template-columns: 28px 62px 66px 1fr 1fr 30px; gap: 4px; } .break-number { font-size: .74rem; } .break-row input { font-size: .82rem; padding: 8px 4px; } .break-status { font-size: .72rem; padding: 8px 3px; } }
     @media (max-width: 390px) { .grid, .summary, .preview, .actions, .timesheet-actions, .comparison-grid { grid-template-columns: 1fr; } .value { font-size: 1.38rem; } }
   </style>
 </head>
@@ -189,14 +190,15 @@
           <div><label for="repeatCount">Repeat days</label><input id="repeatCount" type="number" inputmode="numeric" min="1" max="14" step="1" value="1"></div>
         </div>
         <div class="break-grid">
-          <h3>Detailed breaks, paid upgrade preview</h3>
-          <p class="hint">Add start and finish times. Tap the break length to switch between unpaid red and paid green. Use + if you need another break.</p>
+          <h3>Breaks</h3>
+          <p class="hint">Default is one unpaid 30-minute break. Change the minutes if needed. Start/finish times are optional and only needed if your employer requires strict break records.</p>
           <div id="breakRows" class="break-rows">
             <div class="break-row">
               <div class="break-number">B1</div>
-              <input id="break1Start" class="break-start" type="time" aria-label="Break 1 start">
-              <input id="break1Finish" class="break-finish" type="time" aria-label="Break 1 finish">
-              <button class="break-duration unpaid" type="button" data-paid="false" aria-label="Break 1 unpaid duration">0m</button>
+              <input id="break1Minutes" class="break-minutes" type="number" inputmode="numeric" min="0" step="1" value="30" aria-label="Break 1 minutes">
+              <button class="break-status unpaid" type="button" data-paid="false" aria-label="Break 1 unpaid">Unpaid</button>
+              <input id="break1Start" class="break-start" type="time" aria-label="Break 1 optional start time">
+              <input id="break1Finish" class="break-finish" type="time" aria-label="Break 1 optional finish time">
             </div>
           </div>
           <button id="addBreakRow" class="secondary add-break" type="button">+ Add another break</button>
