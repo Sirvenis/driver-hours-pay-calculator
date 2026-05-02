@@ -8,6 +8,7 @@ const {
   historyRange,
   filterEntriesByHistoryRange,
   pruneEntriesToHistoryLimit,
+  pruneEntriesForStorage,
   repeatShift,
 } = require('./calculator.js');
 
@@ -236,6 +237,20 @@ function testPruneEntriesToFreeFourteenDayHistory() {
   assert.deepStrictEqual(pruned.map((entry) => entry.date), ['2026-05-01', '2026-05-14']);
 }
 
+function testPruneEntriesForStorageKeepsFutureRepeatShifts() {
+  const entries = [
+    { date: '2026-04-18', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+    { date: '2026-05-02', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+    { date: '2026-05-03', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+    { date: '2026-05-04', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+    { date: '2026-05-05', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+    { date: '2026-05-06', startTime: '07:00', finishTime: '15:00', breakMinutes: 30, hourlyRate: 35 },
+  ];
+
+  const pruned = pruneEntriesForStorage(entries, '2026-05-02');
+  assert.deepStrictEqual(pruned.map((entry) => entry.date), ['2026-05-02', '2026-05-03', '2026-05-04', '2026-05-05', '2026-05-06']);
+}
+
 const tests = [
   testDayShiftWithBreak,
   testOvernightShift,
@@ -256,6 +271,7 @@ const tests = [
   testHistoryRangeDefaultsToFourteenDaysIncludingAnchorDate,
   testFilterEntriesByHistoryRangeShowsFourteenDaysOnly,
   testPruneEntriesToFreeFourteenDayHistory,
+  testPruneEntriesForStorageKeepsFutureRepeatShifts,
 ];
 
 for (const test of tests) {

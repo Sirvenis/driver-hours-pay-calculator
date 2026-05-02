@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wagecheck-au-v12';
+const CACHE_NAME = 'wagecheck-au-v13';
 const APP_FILES = [
   './',
   './index.html',

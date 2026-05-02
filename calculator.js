@@ -156,6 +156,11 @@ function pruneEntriesToHistoryLimit(entries, anchorDate, days = 14) {
   return (entries || []).filter((entry) => entry.date >= range.start && entry.date <= range.end);
 }
 
+function pruneEntriesForStorage(entries, anchorDate, days = 14) {
+  const range = historyRange(anchorDate, days);
+  return (entries || []).filter((entry) => entry.date >= range.start);
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     calculateShift,
@@ -168,5 +173,6 @@ if (typeof module !== 'undefined') {
     historyRange,
     filterEntriesByHistoryRange,
     pruneEntriesToHistoryLimit,
+    pruneEntriesForStorage,
   };
 }

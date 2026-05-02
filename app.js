@@ -30,12 +30,12 @@ function minutesLabel(minutes) {
 function loadEntries() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY) || '[]';
-    return pruneEntriesToHistoryLimit(JSON.parse(saved), todayISO(), FREE_HISTORY_DAYS);
+    return pruneEntriesForStorage(JSON.parse(saved), todayISO(), FREE_HISTORY_DAYS);
   } catch (_) { return []; }
 }
 
 function saveEntries(entriesToSave) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(pruneEntriesToHistoryLimit(entriesToSave, todayISO(), FREE_HISTORY_DAYS)));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(pruneEntriesForStorage(entriesToSave, todayISO(), FREE_HISTORY_DAYS)));
 }
 
 function loadSettings() {
@@ -177,7 +177,7 @@ function addShift(event) {
     return;
   }
   entries.push(...repeatShift(shift, document.querySelector('#repeatCount').value, (index) => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${index}`)));
-  entries = pruneEntriesToHistoryLimit(entries, todayISO(), FREE_HISTORY_DAYS);
+  entries = pruneEntriesForStorage(entries, todayISO(), FREE_HISTORY_DAYS);
   entries.sort((a, b) => `${b.date} ${b.startTime}`.localeCompare(`${a.date} ${a.startTime}`));
   saveEntries(entries);
   saveSettings();
