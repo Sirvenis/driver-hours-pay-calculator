@@ -1,5 +1,8 @@
 const STORAGE_KEY = 'wagecheck-au-entries-v1';
 const SETTINGS_KEY = 'wagecheck-au-settings-v1';
+const TIMER_KEY = 'wagecheck-au-active-timer-v1';
+const ACCESS_KEY = 'wagecheck-au-beta-access-v1';
+const PRIVATE_BETA_CODE_HASH = '38e1b66b2b5529c9bb9c3efc6e135cbfe06411ed907885c4e2a71853e860d95e';
 const LEGACY_STORAGE_KEY = 'driver-hours-pay-entries-v1';
 const LEGACY_SETTINGS_KEY = 'driver-hours-pay-settings-v1';
 const FREE_HISTORY_DAYS = 14;
@@ -44,6 +47,28 @@ function loadSettings() {
     return JSON.parse(saved);
   } catch (_) { return {}; }
 }
+
+function hasBetaAccess() {
+  try {
+    const access = JSON.parse(localStorage.getItem(ACCESS_KEY) || '{}');
+    return access.enabled === true && (!access.expiresAt || Date.now() < access.expiresAt);
+  } catch (_) { return false; }
+}
+
+function saveBetaAccess(days = 7) {
+  localStorage.setItem(ACCESS_KEY, JSON.stringify({ enabled: true, startedAt: Date.now(), expiresAt: Date.now() + days * 24 * 60 * 60 * 1000 }));
+}
+
+function loadActiveTimer() {
+  try { return JSON.parse(localStorage.getItem(TIMER_KEY) || 'null'); } catch (_) { return null; }
+}
+
+function saveActiveTimer(timerShift) {
+  if (timerShift) localStorage.setItem(TIMER_KEY, JSON.stringify(timerShift));
+  else localStorage.removeItem(TIMER_KEY);
+}
+
+let activeTimer = loadActiveTimer();
 
 function breakRowTemplate(number, removable = true, defaultMinutes = 0) {
   return `
@@ -351,6 +376,75 @@ function updatePreview() {
   document.querySelector('#previewPay').textContent = money(preview.grossPay);
 }
 
+function renderAccessAndTimer() {
+  const unlocked = hasBetaAccess();
+  const lockedPanel = document.querySelector('#timerLocked');
+  const unlockedPanel = document.querySelector('#timerUnlocked');
+  lockedPanel.hidden = unlocked;
+  unlockedPanel.hidden = !unlocked;
+  if (!unlocked) return;
+
+  const status = document.querySelector('#timerStatus');
+  if (!activeTimer) {
+    status.textContent = 'Timer ready. Tap Start Shift when you begin work.';
+  } else if (activeTimer.status === 'on_break') {
+    const currentBreak = activeTimer.breaks[activeTimer.breaks.length - 1];
+    status.textContent = `On ${currentBreak.paid ? 'paid' : 'unpaid'} break since ${currentBreak.startTime}.`;
+  } else if (activeTimer.status === 'finished') {
+    status.textContent = `Finished: ${activeTimer.startTime} → ${activeTimer.finishTime}. Copy into the form, check/edit, then Save Shift.`;
+  } else {
+    status.textContent = `Shift running since ${activeTimer.startTime}.`;
+  }
+  document.querySelector('#timerStart').disabled = Boolean(activeTimer && activeTimer.status !== 'finished');
+  document.querySelector('#timerBreak').disabled = !activeTimer || activeTimer.status !== 'running';
+  document.querySelector('#timerResume').disabled = !activeTimer || activeTimer.status !== 'on_break';
+  document.querySelector('#timerFinish').disabled = !activeTimer || activeTimer.status === 'finished';
+  document.querySelector('#timerSaveToForm').disabled = !activeTimer || activeTimer.status !== 'finished';
+}
+
+function copyTimerIntoForm() {
+  if (!activeTimer || activeTimer.status !== 'finished') return;
+  const entry = timerShiftToEntry(activeTimer, () => newEntryId());
+  document.querySelector('#date').value = entry.date;
+  document.querySelector('#startTime').value = entry.startTime;
+  document.querySelector('#finishTime').value = entry.finishTime;
+  document.querySelector('#hourlyRate').value = entry.hourlyRate || document.querySelector('#hourlyRate').value;
+  document.querySelector('#note').value = entry.note || document.querySelector('#note').value;
+  setBreakRows(entry.breaks || []);
+  updatePreview();
+  document.querySelector('#shiftForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function sha256Hex(text) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function unlockBetaAccess() {
+  const value = document.querySelector('#betaAccessCode').value.trim();
+  const status = document.querySelector('#accessStatus');
+  const hash = await sha256Hex(value);
+  if (hash !== PRIVATE_BETA_CODE_HASH) {
+    status.textContent = 'Access code not accepted. Paid features remain locked.';
+    return;
+  }
+  saveBetaAccess(7);
+  status.textContent = 'Beta trial unlocked on this device for 7 days.';
+  render();
+}
+
+async function shareFreeApp() {
+  const url = 'https://sirvenis.github.io/driver-hours-pay-calculator/';
+  const text = `WageCheck AU — free shift and gross pay checker: ${url}`;
+  if (navigator.share) {
+    await navigator.share({ title: 'WageCheck AU', text, url });
+    document.querySelector('#shareStatus').textContent = 'Free app shared.';
+    return;
+  }
+  await navigator.clipboard.writeText(url);
+  document.querySelector('#shareStatus').textContent = 'Free app link copied.';
+}
+
 function currentTimesheetPayload() {
   const { range, selected } = selectedEntries();
   return {
@@ -492,6 +586,7 @@ function render() {
   renderSummary();
   renderEntries();
   updatePreview();
+  renderAccessAndTimer();
   renderPayslipComparison();
   updateTimesheetStatus();
 }
@@ -528,6 +623,37 @@ async function loadPaygTables() {
 applyDefaults();
 renumberBreakRows();
 document.querySelector('#shiftForm').addEventListener('submit', addShift);
+document.querySelector('#unlockBeta').addEventListener('click', () => unlockBetaAccess().catch(() => { document.querySelector('#accessStatus').textContent = 'Unable to verify access code on this browser.'; }));
+document.querySelector('#shareFreeApp').addEventListener('click', () => shareFreeApp().catch(() => { document.querySelector('#shareStatus').textContent = 'Unable to share/copy automatically. Copy the link shown above.'; }));
+document.querySelector('#timerStart').addEventListener('click', () => {
+  activeTimer = startTimerShift({ hourlyRate: document.querySelector('#hourlyRate').value, note: document.querySelector('#note').value.trim() });
+  saveActiveTimer(activeTimer);
+  render();
+});
+document.querySelector('#timerBreak').addEventListener('click', () => {
+  if (!activeTimer) return;
+  activeTimer = startTimerBreak(activeTimer, { paid: document.querySelector('#timerBreakPaid').checked });
+  saveActiveTimer(activeTimer);
+  render();
+});
+document.querySelector('#timerResume').addEventListener('click', () => {
+  if (!activeTimer) return;
+  activeTimer = resumeTimerShift(activeTimer);
+  saveActiveTimer(activeTimer);
+  render();
+});
+document.querySelector('#timerFinish').addEventListener('click', () => {
+  if (!activeTimer) return;
+  activeTimer = finishTimerShift(activeTimer);
+  saveActiveTimer(activeTimer);
+  render();
+});
+document.querySelector('#timerSaveToForm').addEventListener('click', copyTimerIntoForm);
+document.querySelector('#timerClear').addEventListener('click', () => {
+  activeTimer = null;
+  saveActiveTimer(null);
+  render();
+});
 document.querySelector('#cancelEdit').addEventListener('click', cancelEditShift);
 document.querySelector('#duplicateLast').addEventListener('click', duplicateLast);
 document.querySelector('#clearAll').addEventListener('click', clearAll);

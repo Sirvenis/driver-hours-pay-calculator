@@ -27,6 +27,7 @@
       --red: #fb7185;
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    [hidden] { display: none !important; }
     body {
       margin: 0;
       min-height: 100vh;
@@ -62,7 +63,16 @@
     }
     .install { margin-top: 12px; width: 100%; background: var(--blue2); }
     .primary { width: 100%; background: var(--blue2); margin-top: 12px; }
+    .timer-primary { background: var(--green); }
+    .timer-break { background: #b45309; }
+    .timer-finish { background: #be123c; }
     .secondary { background: #20334f; color: #dbeafe; }
+    .locked-panel { border: 1px solid rgba(251,191,36,.45); background: rgba(251,191,36,.08); border-radius: 16px; padding: 12px; margin-top: 12px; }
+    .timer-panel { display: grid; gap: 10px; }
+    .timer-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .timer-status { color: #dbeafe; font-weight: 800; }
+    .link-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+    .link-button { display: block; text-align: center; text-decoration: none; border-radius: 14px; padding: 13px 14px; background: #20334f; color: #dbeafe; font-weight: 850; }
     .danger-btn { background: #7f1d1d; color: #fecaca; }
     .card {
       background: linear-gradient(180deg, rgba(23,38,61,.96), rgba(16,28,46,.97));
@@ -176,6 +186,45 @@
         <div class="result"><div id="daysWorked" class="value yellow">0</div><div class="label-text">Days worked</div></div>
         <div class="result"><div id="totalBreaks" class="value">0m</div><div class="label-text">Unpaid breaks</div></div>
       </div>
+    </section>
+
+    <section class="card">
+      <h2>Pro Beta: One-Click Shift Timer</h2>
+      <p class="hint">Locked upgrade feature for trial/beta users. Tap Start, Break, Resume, and Finish to stamp times automatically, then edit anything manually before saving.</p>
+      <div id="timerLocked" class="locked-panel">
+        <strong>Locked until trial/update access is enabled.</strong>
+        <p class="hint">This public app does not ship with paid features unlocked. Enter a private beta access code only if Andrew has given you one.</p>
+        <div class="grid">
+          <div><label for="betaAccessCode">Beta access code</label><input id="betaAccessCode" type="password" autocomplete="one-time-code" placeholder="Private code"></div>
+          <div><label>&nbsp;</label><button id="unlockBeta" class="secondary" type="button">Unlock on this device</button></div>
+        </div>
+        <p class="hint" id="accessStatus">Public sharing stays locked by default.</p>
+      </div>
+      <div id="timerUnlocked" class="timer-panel" hidden>
+        <div class="timer-status" id="timerStatus">Timer ready.</div>
+        <div class="timer-actions">
+          <button id="timerStart" class="primary timer-primary" type="button">Start Shift</button>
+          <button id="timerBreak" class="secondary timer-break" type="button">Start Break</button>
+          <button id="timerResume" class="secondary" type="button">Resume</button>
+          <button id="timerFinish" class="secondary timer-finish" type="button">Finish Shift</button>
+        </div>
+        <label class="check-row" for="timerBreakPaid"><input id="timerBreakPaid" type="checkbox"> Current break is paid</label>
+        <button id="timerSaveToForm" class="primary" type="button">Copy Timer Times Into Form</button>
+        <button id="timerClear" class="secondary" type="button">Clear Active Timer</button>
+        <p class="hint">Timer data is stored only on this device. You can still edit start, finish, breaks, rate, and notes manually before saving.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Help / More</h2>
+      <p class="hint">Share the free app, read the quick guide, request upgrade/beta access, or send suggestions.</p>
+      <div class="link-actions">
+        <button id="shareFreeApp" class="secondary" type="button">Share Free App</button>
+        <a class="link-button" href="https://sirvenis.github.io/wagecheck-au/" target="_blank" rel="noopener">Instructions</a>
+        <a class="link-button" href="https://sirvenis.github.io/wagecheck-au/#upgrade" target="_blank" rel="noopener">Upgrade / Beta</a>
+        <a class="link-button" href="mailto:ajsavenis@gmail.com?subject=WageCheck%20AU%20Suggestion" target="_blank" rel="noopener">Suggestions</a>
+      </div>
+      <p class="hint" id="shareStatus">Free app link: https://sirvenis.github.io/driver-hours-pay-calculator/</p>
     </section>
 
     <section class="card">

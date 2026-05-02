@@ -12,6 +12,11 @@ const {
   repeatShift,
   duplicateShiftNextDay,
   updateEntryById,
+  startTimerShift,
+  startTimerBreak,
+  resumeTimerShift,
+  finishTimerShift,
+  timerShiftToEntry,
 } = require('./calculator.js');
 
 function nearlyEqual(actual, expected, tolerance = 0.001) {
@@ -315,6 +320,53 @@ function testPruneEntriesForStorageKeepsFutureRepeatShifts() {
   assert.deepStrictEqual(pruned.map((entry) => entry.date), ['2026-05-02', '2026-05-03', '2026-05-04', '2026-05-05', '2026-05-06']);
 }
 
+function testTimerShiftCapturesStartBreakResumeFinish() {
+  let timer = startTimerShift({ now: '2026-05-03T07:15:00', hourlyRate: '35.00', note: 'Packing shed' });
+  assert.strictEqual(timer.status, 'running');
+  assert.strictEqual(timer.date, '2026-05-03');
+  assert.strictEqual(timer.startTime, '07:15');
+
+  timer = startTimerBreak(timer, { now: '2026-05-03T10:00:00', paid: false });
+  assert.strictEqual(timer.status, 'on_break');
+  assert.strictEqual(timer.breaks[0].startTime, '10:00');
+  assert.strictEqual(timer.breaks[0].paid, false);
+
+  timer = resumeTimerShift(timer, { now: '2026-05-03T10:20:00' });
+  assert.strictEqual(timer.status, 'running');
+  assert.strictEqual(timer.breaks[0].finishTime, '10:20');
+  assert.strictEqual(timer.breaks[0].durationMinutes, 20);
+
+  timer = finishTimerShift(timer, { now: '2026-05-03T15:45:00' });
+  assert.strictEqual(timer.status, 'finished');
+  assert.strictEqual(timer.finishTime, '15:45');
+
+  const entry = timerShiftToEntry(timer, () => 'timer-id');
+  assert.deepStrictEqual(entry, {
+    id: 'timer-id',
+    date: '2026-05-03',
+    startTime: '07:15',
+    finishTime: '15:45',
+    breaks: [{ startTime: '10:00', finishTime: '10:20', durationMinutes: 20, paid: false }],
+    breakMinutes: 0,
+    hourlyRate: '35.00',
+    note: 'Packing shed',
+    source: 'timer',
+  });
+}
+
+function testTimerBreakCanBeMarkedPaidAndDoesNotSubtractFromPay() {
+  let timer = startTimerShift({ now: '2026-05-03T07:00:00', hourlyRate: 40 });
+  timer = startTimerBreak(timer, { now: '2026-05-03T09:00:00', paid: true });
+  timer = resumeTimerShift(timer, { now: '2026-05-03T09:15:00' });
+  timer = finishTimerShift(timer, { now: '2026-05-03T15:00:00' });
+
+  const entry = timerShiftToEntry(timer, () => 'paid-break-id');
+  const shift = calculateShift(entry);
+  assert.strictEqual(shift.paidBreakMinutes, 15);
+  assert.strictEqual(shift.breakMinutes, 0);
+  assert.strictEqual(shift.paidMinutes, 480);
+}
+
 const tests = [
   testDayShiftWithBreak,
   testOvernightShift,
@@ -340,6 +392,8 @@ const tests = [
   testFilterEntriesByHistoryRangeShowsFourteenDaysOnly,
   testPruneEntriesToFreeFourteenDayHistory,
   testPruneEntriesForStorageKeepsFutureRepeatShifts,
+  testTimerShiftCapturesStartBreakResumeFinish,
+  testTimerBreakCanBeMarkedPaidAndDoesNotSubtractFromPay,
 ];
 
 for (const test of tests) {

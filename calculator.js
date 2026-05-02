@@ -176,6 +176,73 @@ function pruneEntriesForStorage(entries, anchorDate, days = 14) {
   return (entries || []).filter((entry) => entry.date >= range.start);
 }
 
+function toLocalDateTimeParts(now = new Date()) {
+  const date = now instanceof Date ? now : new Date(now);
+  if (Number.isNaN(date.getTime())) return { date: toISODate(new Date()), time: '00:00' };
+  return {
+    date: toISODate(date),
+    time: `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`,
+  };
+}
+
+function startTimerShift({ now = new Date(), hourlyRate = '', note = '' } = {}) {
+  const parts = toLocalDateTimeParts(now);
+  return {
+    status: 'running',
+    date: parts.date,
+    startTime: parts.time,
+    finishTime: '',
+    breaks: [],
+    hourlyRate,
+    note,
+    source: 'timer',
+  };
+}
+
+function startTimerBreak(timerShift, { now = new Date(), paid = false } = {}) {
+  const parts = toLocalDateTimeParts(now);
+  const breaks = (timerShift.breaks || []).map((breakRow) => ({ ...breakRow }));
+  return {
+    ...timerShift,
+    status: 'on_break',
+    breaks: [...breaks, { startTime: parts.time, finishTime: '', durationMinutes: 0, paid: paid === true }],
+  };
+}
+
+function resumeTimerShift(timerShift, { now = new Date() } = {}) {
+  const parts = toLocalDateTimeParts(now);
+  const breaks = (timerShift.breaks || []).map((breakRow) => ({ ...breakRow }));
+  const activeIndex = breaks.findLastIndex ? breaks.findLastIndex((breakRow) => breakRow.startTime && !breakRow.finishTime) : (() => {
+    for (let index = breaks.length - 1; index >= 0; index -= 1) if (breaks[index].startTime && !breaks[index].finishTime) return index;
+    return -1;
+  })();
+  if (activeIndex >= 0) {
+    breaks[activeIndex].finishTime = parts.time;
+    breaks[activeIndex].durationMinutes = calculateTimedBreakMinutes(breaks[activeIndex]);
+  }
+  return { ...timerShift, status: 'running', breaks };
+}
+
+function finishTimerShift(timerShift, { now = new Date() } = {}) {
+  const parts = toLocalDateTimeParts(now);
+  const resumed = timerShift.status === 'on_break' ? resumeTimerShift(timerShift, { now }) : timerShift;
+  return { ...resumed, status: 'finished', finishTime: parts.time };
+}
+
+function timerShiftToEntry(timerShift, idFactory = () => `${Date.now()}`) {
+  return {
+    id: timerShift.id || idFactory(),
+    date: timerShift.date,
+    startTime: timerShift.startTime,
+    finishTime: timerShift.finishTime,
+    breaks: (timerShift.breaks || []).map((breakRow) => ({ ...breakRow })),
+    breakMinutes: 0,
+    hourlyRate: timerShift.hourlyRate,
+    note: timerShift.note || '',
+    source: 'timer',
+  };
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     calculateShift,
@@ -191,5 +258,10 @@ if (typeof module !== 'undefined') {
     filterEntriesByHistoryRange,
     pruneEntriesToHistoryLimit,
     pruneEntriesForStorage,
+    startTimerShift,
+    startTimerBreak,
+    resumeTimerShift,
+    finishTimerShift,
+    timerShiftToEntry,
   };
 }
