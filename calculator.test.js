@@ -17,6 +17,12 @@ const {
   resumeTimerShift,
   finishTimerShift,
   timerShiftToEntry,
+  buildFatigueWarnings,
+  createLocationEvent,
+  locationMapUrl,
+  buildEmergencyLocationMessage,
+  buildEmergencySmsHref,
+  buildEmergencyMailtoHref,
 } = require('./calculator.js');
 
 function nearlyEqual(actual, expected, tolerance = 0.001) {
@@ -367,6 +373,56 @@ function testTimerBreakCanBeMarkedPaidAndDoesNotSubtractFromPay() {
   assert.strictEqual(shift.paidMinutes, 480);
 }
 
+function testFatigueWarningsCanBeDisabled() {
+  const warnings = buildFatigueWarnings({
+    enabled: false,
+    entries: [{ date: '2026-05-03', startTime: '07:00', finishTime: '19:30', breaks: [], hourlyRate: 35 }],
+  });
+
+  assert.deepStrictEqual(warnings, []);
+}
+
+function testFatigueWarningsFlagLongShiftNoBreakShortRestAndWeeklyHours() {
+  const warnings = buildFatigueWarnings({
+    enabled: true,
+    entries: [
+      { date: '2026-05-01', startTime: '07:00', finishTime: '19:00', breaks: [{ durationMinutes: 30, paid: false }], hourlyRate: 35 },
+      { date: '2026-05-02', startTime: '02:00', finishTime: '08:00', breaks: [], hourlyRate: 35 },
+      { date: '2026-05-03', startTime: '07:00', finishTime: '19:30', breaks: [], hourlyRate: 35 },
+      { date: '2026-05-04', startTime: '07:00', finishTime: '19:00', breaks: [{ durationMinutes: 30, paid: false }], hourlyRate: 35 },
+      { date: '2026-05-05', startTime: '07:00', finishTime: '19:00', breaks: [{ durationMinutes: 30, paid: false }], hourlyRate: 35 },
+    ],
+    settings: { longShiftHours: 10, noBreakAfterHours: 5, minimumRestHours: 10, weeklyHours: 38 },
+  });
+
+  assert.ok(warnings.some((warning) => warning.code === 'long_shift'));
+  assert.ok(warnings.some((warning) => warning.code === 'no_break'));
+  assert.ok(warnings.some((warning) => warning.code === 'short_rest'));
+  assert.ok(warnings.some((warning) => warning.code === 'weekly_hours'));
+  assert.ok(warnings.every((warning) => warning.disclaimer.includes('simple warning only')));
+}
+
+function testLocationEventFormatsMapUrlAndEmergencyMessages() {
+  const event = createLocationEvent('start', {
+    coords: { latitude: -17.523456, longitude: 146.031234, accuracy: 18 },
+    timestamp: new Date('2026-05-03T07:15:00+10:00').getTime(),
+  });
+
+  assert.strictEqual(event.type, 'start');
+  assert.strictEqual(event.latitude, -17.523456);
+  assert.strictEqual(event.longitude, 146.031234);
+  assert.strictEqual(event.accuracyMeters, 18);
+  assert.strictEqual(locationMapUrl(event), 'https://maps.google.com/?q=-17.523456,146.031234');
+
+  const message = buildEmergencyLocationMessage(event, { workerName: 'Andrew', note: 'Breakdown near job site' });
+  assert.ok(message.includes('Andrew'));
+  assert.ok(message.includes('Breakdown near job site'));
+  assert.ok(message.includes('https://maps.google.com/?q=-17.523456,146.031234'));
+
+  assert.ok(buildEmergencySmsHref(event, { phone: '0400000000' }).startsWith('sms:0400000000?body='));
+  assert.ok(buildEmergencyMailtoHref(event, { email: 'help@example.com' }).startsWith('mailto:help%40example.com?subject='));
+}
+
 const tests = [
   testDayShiftWithBreak,
   testOvernightShift,
@@ -394,6 +450,9 @@ const tests = [
   testPruneEntriesForStorageKeepsFutureRepeatShifts,
   testTimerShiftCapturesStartBreakResumeFinish,
   testTimerBreakCanBeMarkedPaidAndDoesNotSubtractFromPay,
+  testFatigueWarningsCanBeDisabled,
+  testFatigueWarningsFlagLongShiftNoBreakShortRestAndWeeklyHours,
+  testLocationEventFormatsMapUrlAndEmergencyMessages,
 ];
 
 for (const test of tests) {

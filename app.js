@@ -188,12 +188,18 @@ function saveSettings() {
     workerName: document.querySelector('#workerName').value.trim(),
     payOfficeEmail: document.querySelector('#payOfficeEmail').value.trim(),
     employerName: document.querySelector('#employerName').value.trim(),
+    fatigueWarningsEnabled: document.querySelector('#fatigueWarningsEnabled')?.checked === true,
+    recordLocation: document.querySelector('#recordLocation')?.checked === true,
+    emergencyContactPhone: document.querySelector('#emergencyContactPhone')?.value.trim() || '',
+    emergencyContactEmail: document.querySelector('#emergencyContactEmail')?.value.trim() || '',
+    emergencyNote: document.querySelector('#emergencyNote')?.value.trim() || '',
   };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
 
 let entries = loadEntries();
 let editingEntryId = null;
+let emergencyLocation = null;
 
 function newEntryId(index = 0) {
   return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${index}`;
@@ -209,6 +215,11 @@ function applyDefaults() {
   document.querySelector('#workerName').value = settings.workerName || '';
   document.querySelector('#payOfficeEmail').value = settings.payOfficeEmail || '';
   document.querySelector('#employerName').value = settings.employerName || '';
+  document.querySelector('#fatigueWarningsEnabled').checked = settings.fatigueWarningsEnabled === true;
+  document.querySelector('#recordLocation').checked = settings.recordLocation === true;
+  document.querySelector('#emergencyContactPhone').value = settings.emergencyContactPhone || '';
+  document.querySelector('#emergencyContactEmail').value = settings.emergencyContactEmail || '';
+  document.querySelector('#emergencyNote').value = settings.emergencyNote || '';
 }
 
 function getFormShift() {
@@ -355,6 +366,7 @@ function renderEntries() {
           <strong>${shift.date}</strong>
           <div class="muted">${shift.startTime} → ${shift.finishTime} · break ${shift.breakMinutes}m</div>
           ${formatBreakRows(entry.breaks) ? `<div class="muted">Break times: ${escapeHtml(formatBreakRows(entry.breaks))}</div>` : ''}
+          ${entry.locations?.length ? `<div class="location-list">${formatLocationEvents(entry.locations)}</div>` : ''}
           ${entry.note ? `<div class="note">${escapeHtml(entry.note)}</div>` : ''}
         </div>
         <div class="entry-right">
@@ -367,7 +379,14 @@ function renderEntries() {
 }
 
 function escapeHtml(text) {
-  return text.replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' }[char]));
+  return String(text ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' }[char]));
+}
+
+function formatLocationEvents(locations = []) {
+  return (locations || []).map((location) => {
+    const label = String(location.type || 'location').replace(/_/g, ' ');
+    return `<div class="location-event"><strong>${escapeHtml(label)}</strong> · ${escapeHtml(location.timestamp || '')}<br><a href="${escapeHtml(location.mapUrl || locationMapUrl(location))}" target="_blank" rel="noopener">Open map</a>${location.accuracyMeters ? ` · approx ${escapeHtml(location.accuracyMeters)}m accuracy` : ''}</div>`;
+  }).join('');
 }
 
 function updatePreview() {
@@ -400,6 +419,37 @@ function renderAccessAndTimer() {
   document.querySelector('#timerResume').disabled = !activeTimer || activeTimer.status !== 'on_break';
   document.querySelector('#timerFinish').disabled = !activeTimer || activeTimer.status === 'finished';
   document.querySelector('#timerSaveToForm').disabled = !activeTimer || activeTimer.status !== 'finished';
+  document.querySelector('#timerLocations').innerHTML = activeTimer?.locations?.length ? formatLocationEvents(activeTimer.locations) : '';
+}
+
+function renderFatigueWarnings() {
+  const enabled = document.querySelector('#fatigueWarningsEnabled').checked;
+  const warnings = buildFatigueWarnings({ enabled, entries: selectedEntries().selected });
+  const container = document.querySelector('#fatigueWarnings');
+  if (!enabled) {
+    container.innerHTML = '<p class="hint">Fatigue warnings are off.</p>';
+    return;
+  }
+  if (!warnings.length) {
+    container.innerHTML = '<p class="hint">No fatigue warnings for the selected pay period.</p>';
+    return;
+  }
+  container.innerHTML = warnings.map((warning) => `<div class="warning-banner">${escapeHtml(warning.message)}<br><span class="hint">${escapeHtml(warning.disclaimer)}</span></div>`).join('');
+}
+
+function getCurrentPositionIfEnabled() {
+  if (!document.querySelector('#recordLocation').checked) return Promise.resolve(null);
+  return getCurrentPosition();
+}
+
+function getCurrentPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('GPS is not available in this browser.'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
+  });
 }
 
 function copyTimerIntoForm() {
@@ -443,6 +493,59 @@ async function shareFreeApp() {
   }
   await navigator.clipboard.writeText(url);
   document.querySelector('#shareStatus').textContent = 'Free app link copied.';
+}
+
+function emergencyOptions() {
+  return {
+    workerName: document.querySelector('#workerName').value.trim(),
+    phone: document.querySelector('#emergencyContactPhone').value.trim(),
+    email: document.querySelector('#emergencyContactEmail').value.trim(),
+    note: document.querySelector('#emergencyNote').value.trim(),
+  };
+}
+
+function emergencyMessage() {
+  if (!emergencyLocation) return '';
+  return buildEmergencyLocationMessage(emergencyLocation, emergencyOptions());
+}
+
+async function getEmergencyLocation() {
+  const status = document.querySelector('#emergencyStatus');
+  status.textContent = 'Requesting GPS location...';
+  const position = await getCurrentPosition();
+  emergencyLocation = createLocationEvent('emergency', position);
+  status.innerHTML = `${escapeHtml(buildEmergencyLocationMessage(emergencyLocation, emergencyOptions())).replace(/\n/g, '<br>')}`;
+  saveSettings();
+}
+
+async function shareEmergencyLocation() {
+  if (!emergencyLocation) await getEmergencyLocation();
+  const message = emergencyMessage();
+  if (navigator.share) {
+    await navigator.share({ title: 'Emergency location', text: message, url: emergencyLocation.mapUrl });
+    document.querySelector('#emergencyStatus').textContent = 'Emergency location shared.';
+    return;
+  }
+  await navigator.clipboard.writeText(message);
+  document.querySelector('#emergencyStatus').textContent = 'Share sheet unavailable, so the emergency location message was copied.';
+}
+
+async function copyEmergencyLocation() {
+  if (!emergencyLocation) await getEmergencyLocation();
+  await navigator.clipboard.writeText(emergencyMessage());
+  document.querySelector('#emergencyStatus').textContent = 'Emergency location message copied.';
+}
+
+async function smsEmergencyLocation() {
+  if (!emergencyLocation) await getEmergencyLocation();
+  window.location.href = buildEmergencySmsHref(emergencyLocation, emergencyOptions());
+  document.querySelector('#emergencyStatus').textContent = 'Opening SMS app with emergency location message.';
+}
+
+async function emailEmergencyLocation() {
+  if (!emergencyLocation) await getEmergencyLocation();
+  window.location.href = buildEmergencyMailtoHref(emergencyLocation, emergencyOptions());
+  document.querySelector('#emergencyStatus').textContent = 'Opening email app with emergency location message.';
 }
 
 function currentTimesheetPayload() {
@@ -587,6 +690,7 @@ function render() {
   renderEntries();
   updatePreview();
   renderAccessAndTimer();
+  renderFatigueWarnings();
   renderPayslipComparison();
   updateTimesheetStatus();
 }
@@ -625,26 +729,35 @@ renumberBreakRows();
 document.querySelector('#shiftForm').addEventListener('submit', addShift);
 document.querySelector('#unlockBeta').addEventListener('click', () => unlockBetaAccess().catch(() => { document.querySelector('#accessStatus').textContent = 'Unable to verify access code on this browser.'; }));
 document.querySelector('#shareFreeApp').addEventListener('click', () => shareFreeApp().catch(() => { document.querySelector('#shareStatus').textContent = 'Unable to share/copy automatically. Copy the link shown above.'; }));
-document.querySelector('#timerStart').addEventListener('click', () => {
-  activeTimer = startTimerShift({ hourlyRate: document.querySelector('#hourlyRate').value, note: document.querySelector('#note').value.trim() });
+document.querySelector('#getEmergencyLocation').addEventListener('click', () => getEmergencyLocation().catch((error) => { document.querySelector('#emergencyStatus').textContent = error.message || 'Unable to get GPS location.'; }));
+document.querySelector('#shareEmergencyLocation').addEventListener('click', () => shareEmergencyLocation().catch(() => { document.querySelector('#emergencyStatus').textContent = 'Unable to share. Try Copy Message.'; }));
+document.querySelector('#smsEmergencyLocation').addEventListener('click', () => smsEmergencyLocation().catch(() => { document.querySelector('#emergencyStatus').textContent = 'Unable to open SMS. Try Copy Message.'; }));
+document.querySelector('#emailEmergencyLocation').addEventListener('click', () => emailEmergencyLocation().catch(() => { document.querySelector('#emergencyStatus').textContent = 'Unable to open email. Try Copy Message.'; }));
+document.querySelector('#copyEmergencyLocation').addEventListener('click', () => copyEmergencyLocation().catch(() => { document.querySelector('#emergencyStatus').textContent = 'Unable to copy automatically.'; }));
+document.querySelector('#timerStart').addEventListener('click', async () => {
+  const location = await getCurrentPositionIfEnabled().catch(() => null);
+  activeTimer = startTimerShift({ hourlyRate: document.querySelector('#hourlyRate').value, note: document.querySelector('#note').value.trim(), location });
   saveActiveTimer(activeTimer);
   render();
 });
-document.querySelector('#timerBreak').addEventListener('click', () => {
+document.querySelector('#timerBreak').addEventListener('click', async () => {
   if (!activeTimer) return;
-  activeTimer = startTimerBreak(activeTimer, { paid: document.querySelector('#timerBreakPaid').checked });
+  const location = await getCurrentPositionIfEnabled().catch(() => null);
+  activeTimer = startTimerBreak(activeTimer, { paid: document.querySelector('#timerBreakPaid').checked, location });
   saveActiveTimer(activeTimer);
   render();
 });
-document.querySelector('#timerResume').addEventListener('click', () => {
+document.querySelector('#timerResume').addEventListener('click', async () => {
   if (!activeTimer) return;
-  activeTimer = resumeTimerShift(activeTimer);
+  const location = await getCurrentPositionIfEnabled().catch(() => null);
+  activeTimer = resumeTimerShift(activeTimer, { location });
   saveActiveTimer(activeTimer);
   render();
 });
-document.querySelector('#timerFinish').addEventListener('click', () => {
+document.querySelector('#timerFinish').addEventListener('click', async () => {
   if (!activeTimer) return;
-  activeTimer = finishTimerShift(activeTimer);
+  const location = await getCurrentPositionIfEnabled().catch(() => null);
+  activeTimer = finishTimerShift(activeTimer, { location });
   saveActiveTimer(activeTimer);
   render();
 });

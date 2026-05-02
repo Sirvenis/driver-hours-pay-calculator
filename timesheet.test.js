@@ -67,8 +67,8 @@ function testBuildTimesheetCsvEscapesNotesAndIncludesRows() {
     ],
   });
 
-  assert.ok(csv.includes('Date,Start,Finish,Breaks,Unpaid break minutes,Paid break minutes,Paid hours,Gross estimate,Note'));
-  assert.ok(csv.includes('2026-05-02,07:00,17:00,12:00-12:30 unpaid 30m,30,0,9.50,332.50,"Site A, dock 4"'));
+  assert.ok(csv.includes('Date,Start,Finish,Breaks,Unpaid break minutes,Paid break minutes,Paid hours,Gross estimate,Locations,Note'));
+  assert.ok(csv.includes('2026-05-02,07:00,17:00,12:00-12:30 unpaid 30m,30,0,9.50,332.50,,"Site A, dock 4"'));
 }
 
 function testBuildTimesheetPrintHtmlIncludesPrintableTableAndTotals() {
@@ -97,12 +97,36 @@ function testBuildTimesheetPrintHtmlIncludesPrintableTableAndTotals() {
   assert.ok(html.includes('$332.50'));
 }
 
+function testTimesheetExportsListOldestShiftFirst() {
+  const payload = {
+    range: { start: '2026-05-02', end: '2026-05-15' },
+    entries: [
+      { date: '2026-05-15', startTime: '07:00', finishTime: '17:00', hourlyRate: 35, breaks: [], note: 'Last shift' },
+      { date: '2026-05-02', startTime: '07:00', finishTime: '17:00', hourlyRate: 35, breaks: [], note: 'First shift' },
+      { date: '2026-05-08', startTime: '06:30', finishTime: '16:30', hourlyRate: 35, breaks: [], note: 'Middle shift' },
+    ],
+  };
+
+  const text = buildTimesheetText(payload);
+  assert.ok(text.indexOf('2026-05-02 |') < text.indexOf('2026-05-08 |'));
+  assert.ok(text.indexOf('2026-05-08 |') < text.indexOf('2026-05-15 |'));
+
+  const csv = buildTimesheetCsv(payload);
+  assert.ok(csv.indexOf('2026-05-02,') < csv.indexOf('2026-05-08,'));
+  assert.ok(csv.indexOf('2026-05-08,') < csv.indexOf('2026-05-15,'));
+
+  const html = buildTimesheetPrintHtml(payload);
+  assert.ok(html.indexOf('<td>2026-05-02</td>') < html.indexOf('<td>2026-05-08</td>'));
+  assert.ok(html.indexOf('<td>2026-05-08</td>') < html.indexOf('<td>2026-05-15</td>'));
+}
+
 const tests = [
   testFormatTimesheetBreaksShowsPaidAndUnpaidDurations,
   testFormatTimesheetBreaksSupportsDurationOnlyBreaks,
   testBuildTimesheetTextIncludesPeriodRowsAndTotals,
   testBuildTimesheetCsvEscapesNotesAndIncludesRows,
   testBuildTimesheetPrintHtmlIncludesPrintableTableAndTotals,
+  testTimesheetExportsListOldestShiftFirst,
 ];
 
 for (const test of tests) {

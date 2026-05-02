@@ -31,6 +31,16 @@ function formatTimesheetBreaks(breaks) {
   }).join('; ');
 }
 
+function formatTimesheetLocations(locations) {
+  const validLocations = (locations || []).filter((location) => location && location.latitude != null && location.longitude != null);
+  if (!validLocations.length) return '';
+  return validLocations.map((location) => {
+    const label = String(location.type || 'location').replace(/_/g, ' ');
+    const mapUrl = location.mapUrl || `https://maps.google.com/?q=${location.latitude},${location.longitude}`;
+    return `${label}: ${mapUrl}${location.accuracyMeters ? ` (approx ${location.accuracyMeters}m)` : ''}`;
+  }).join('; ');
+}
+
 function getTimesheetCalculator() {
   if (typeof module !== 'undefined' && module.exports) return require('./calculator.js');
   return { calculateShift: window.calculateShift, calculateTotals: window.calculateTotals };
@@ -38,7 +48,10 @@ function getTimesheetCalculator() {
 
 function buildTimesheetRows(entries) {
   const { calculateShift } = getTimesheetCalculator();
-  return (entries || []).map((entry) => {
+  return (entries || [])
+    .slice()
+    .sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`))
+    .map((entry) => {
     const shift = calculateShift(entry);
     return {
       date: shift.date,
@@ -49,6 +62,7 @@ function buildTimesheetRows(entries) {
       paidBreakMinutes: shift.paidBreakMinutes,
       paidHours: shift.paidHours,
       grossPay: shift.grossPay,
+      locations: formatTimesheetLocations(entry.locations),
       note: entry.note || '',
     };
   });
@@ -66,7 +80,7 @@ function buildTimesheetText({ entries, range, workerName = '', employer = '' }) 
   if (employer) lines.push(`Employer/site: ${employer}`);
   lines.push('', 'Shifts:');
   rows.forEach((row) => {
-    lines.push(`${row.date} | ${row.startTime}-${row.finishTime} | Breaks: ${row.breaks} | Paid: ${row.paidHours.toFixed(2)}h | Gross estimate: $${row.grossPay.toFixed(2)}${row.note ? ` | Note: ${row.note}` : ''}`);
+    lines.push(`${row.date} | ${row.startTime}-${row.finishTime} | Breaks: ${row.breaks} | Paid: ${row.paidHours.toFixed(2)}h | Gross estimate: $${row.grossPay.toFixed(2)}${row.locations ? ` | Locations: ${row.locations}` : ''}${row.note ? ` | Note: ${row.note}` : ''}`);
   });
   lines.push('', `Total paid hours: ${totals.paidHours.toFixed(2)}h`);
   lines.push(`Total gross estimate: $${totals.grossPay.toFixed(2)}`);
@@ -82,8 +96,8 @@ function buildTimesheetCsv({ entries, range, workerName = '', employer = '' }) {
     ['Worker', workerName],
     ['Employer/site', employer],
     [],
-    ['Date', 'Start', 'Finish', 'Breaks', 'Unpaid break minutes', 'Paid break minutes', 'Paid hours', 'Gross estimate', 'Note'],
-    ...rows.map((row) => [row.date, row.startTime, row.finishTime, row.breaks, row.unpaidBreakMinutes, row.paidBreakMinutes, row.paidHours.toFixed(2), row.grossPay.toFixed(2), row.note]),
+    ['Date', 'Start', 'Finish', 'Breaks', 'Unpaid break minutes', 'Paid break minutes', 'Paid hours', 'Gross estimate', 'Locations', 'Note'],
+    ...rows.map((row) => [row.date, row.startTime, row.finishTime, row.breaks, row.unpaidBreakMinutes, row.paidBreakMinutes, row.paidHours.toFixed(2), row.grossPay.toFixed(2), row.locations, row.note]),
   ];
   return csvRows.map((row) => row.map(csvEscape).join(',')).join('\n');
 }
@@ -123,9 +137,9 @@ function buildTimesheetPrintHtml({ entries, range, workerName = '', employer = '
   ${workerName ? `<p class="meta">Worker: ${htmlEscape(workerName)}</p>` : ''}
   ${employer ? `<p class="meta">Employer/site: ${htmlEscape(employer)}</p>` : ''}
   <table>
-    <thead><tr><th>Date</th><th>Start</th><th>Finish</th><th>Breaks</th><th>Paid hours</th><th>Gross estimate</th><th>Note</th></tr></thead>
+    <thead><tr><th>Date</th><th>Start</th><th>Finish</th><th>Breaks</th><th>Paid hours</th><th>Gross estimate</th><th>Locations</th><th>Note</th></tr></thead>
     <tbody>
-      ${rows.map((row) => `<tr><td>${htmlEscape(row.date)}</td><td>${htmlEscape(row.startTime)}</td><td>${htmlEscape(row.finishTime)}</td><td>${htmlEscape(row.breaks)}</td><td>${row.paidHours.toFixed(2)}h</td><td>${money(row.grossPay)}</td><td>${htmlEscape(row.note)}</td></tr>`).join('')}
+      ${rows.map((row) => `<tr><td>${htmlEscape(row.date)}</td><td>${htmlEscape(row.startTime)}</td><td>${htmlEscape(row.finishTime)}</td><td>${htmlEscape(row.breaks)}</td><td>${row.paidHours.toFixed(2)}h</td><td>${money(row.grossPay)}</td><td>${htmlEscape(row.locations)}</td><td>${htmlEscape(row.note)}</td></tr>`).join('')}
     </tbody>
   </table>
   <div class="totals">Total paid hours: ${totals.paidHours.toFixed(2)}h<br>Total gross estimate: ${money(totals.grossPay)}</div>
@@ -135,5 +149,5 @@ function buildTimesheetPrintHtml({ entries, range, workerName = '', employer = '
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { buildTimesheetRows, buildTimesheetText, buildTimesheetCsv, buildTimesheetPrintHtml, formatTimesheetBreaks };
+  module.exports = { buildTimesheetRows, buildTimesheetText, buildTimesheetCsv, buildTimesheetPrintHtml, formatTimesheetBreaks, formatTimesheetLocations };
 }

@@ -185,9 +185,9 @@ function toLocalDateTimeParts(now = new Date()) {
   };
 }
 
-function startTimerShift({ now = new Date(), hourlyRate = '', note = '' } = {}) {
+function startTimerShift({ now = new Date(), hourlyRate = '', note = '', location = null } = {}) {
   const parts = toLocalDateTimeParts(now);
-  return {
+  const shift = {
     status: 'running',
     date: parts.date,
     startTime: parts.time,
@@ -197,19 +197,20 @@ function startTimerShift({ now = new Date(), hourlyRate = '', note = '' } = {}) 
     note,
     source: 'timer',
   };
+  return appendTimerLocation(shift, 'start', location, now);
 }
 
-function startTimerBreak(timerShift, { now = new Date(), paid = false } = {}) {
+function startTimerBreak(timerShift, { now = new Date(), paid = false, location = null } = {}) {
   const parts = toLocalDateTimeParts(now);
   const breaks = (timerShift.breaks || []).map((breakRow) => ({ ...breakRow }));
-  return {
+  return appendTimerLocation({
     ...timerShift,
     status: 'on_break',
     breaks: [...breaks, { startTime: parts.time, finishTime: '', durationMinutes: 0, paid: paid === true }],
-  };
+  }, 'break_start', location, now);
 }
 
-function resumeTimerShift(timerShift, { now = new Date() } = {}) {
+function resumeTimerShift(timerShift, { now = new Date(), location = null } = {}) {
   const parts = toLocalDateTimeParts(now);
   const breaks = (timerShift.breaks || []).map((breakRow) => ({ ...breakRow }));
   const activeIndex = breaks.findLastIndex ? breaks.findLastIndex((breakRow) => breakRow.startTime && !breakRow.finishTime) : (() => {
@@ -220,17 +221,54 @@ function resumeTimerShift(timerShift, { now = new Date() } = {}) {
     breaks[activeIndex].finishTime = parts.time;
     breaks[activeIndex].durationMinutes = calculateTimedBreakMinutes(breaks[activeIndex]);
   }
-  return { ...timerShift, status: 'running', breaks };
+  return appendTimerLocation({ ...timerShift, status: 'running', breaks }, 'break_finish', location, now);
 }
 
-function finishTimerShift(timerShift, { now = new Date() } = {}) {
+function finishTimerShift(timerShift, { now = new Date(), location = null } = {}) {
   const parts = toLocalDateTimeParts(now);
-  const resumed = timerShift.status === 'on_break' ? resumeTimerShift(timerShift, { now }) : timerShift;
-  return { ...resumed, status: 'finished', finishTime: parts.time };
+  const resumed = timerShift.status === 'on_break' ? resumeTimerShift(timerShift, { now, location }) : timerShift;
+  return appendTimerLocation({ ...resumed, status: 'finished', finishTime: parts.time }, 'finish', location, now);
+}
+
+function normalizePosition(position, now = new Date()) {
+  if (!position || !position.coords) return null;
+  const latitude = Number(position.coords.latitude);
+  const longitude = Number(position.coords.longitude);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  return {
+    latitude,
+    longitude,
+    accuracyMeters: Math.round(Number(position.coords.accuracy) || 0),
+    timestamp: new Date(position.timestamp || now).toISOString(),
+  };
+}
+
+function locationMapUrl(location) {
+  if (!location || !Number.isFinite(Number(location.latitude)) || !Number.isFinite(Number(location.longitude))) return '';
+  return `https://maps.google.com/?q=${location.latitude},${location.longitude}`;
+}
+
+function createLocationEvent(type, position, now = new Date()) {
+  const normalized = normalizePosition(position, now);
+  if (!normalized) return null;
+  return {
+    type,
+    ...normalized,
+    mapUrl: locationMapUrl(normalized),
+  };
+}
+
+function appendTimerLocation(timerShift, type, position, now = new Date()) {
+  const event = createLocationEvent(type, position, now);
+  if (!event) return timerShift;
+  return {
+    ...timerShift,
+    locations: [...(timerShift.locations || []), event],
+  };
 }
 
 function timerShiftToEntry(timerShift, idFactory = () => `${Date.now()}`) {
-  return {
+  const entry = {
     id: timerShift.id || idFactory(),
     date: timerShift.date,
     startTime: timerShift.startTime,
@@ -241,6 +279,66 @@ function timerShiftToEntry(timerShift, idFactory = () => `${Date.now()}`) {
     note: timerShift.note || '',
     source: 'timer',
   };
+  if ((timerShift.locations || []).length) entry.locations = timerShift.locations.map((location) => ({ ...location }));
+  return entry;
+}
+
+function shiftDateTime(entry, timeField) {
+  const time = entry[timeField] || '00:00';
+  const date = parseISODate(entry.date || toISODate(new Date()));
+  const [hours, minutes] = time.split(':').map(Number);
+  date.setHours(Number.isFinite(hours) ? hours : 0, Number.isFinite(minutes) ? minutes : 0, 0, 0);
+  if (timeField === 'finishTime' && parseTimeToMinutes(entry.finishTime) < parseTimeToMinutes(entry.startTime)) date.setDate(date.getDate() + 1);
+  return date;
+}
+
+function buildFatigueWarnings({ enabled = false, entries = [], settings = {} } = {}) {
+  if (!enabled) return [];
+  const disclaimer = 'Fatigue Assistant: simple warning only, not legal/compliance advice or an authorized fatigue-management system.';
+  const longShiftHours = cleanNumber(settings.longShiftHours, 10);
+  const noBreakAfterHours = cleanNumber(settings.noBreakAfterHours, 5);
+  const minimumRestHours = cleanNumber(settings.minimumRestHours, 10);
+  const weeklyHours = cleanNumber(settings.weeklyHours, 60);
+  const sorted = (entries || []).slice().sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`));
+  const warnings = [];
+
+  sorted.forEach((entry, index) => {
+    const shift = calculateShift(entry);
+    if (shift.paidHours >= longShiftHours) warnings.push({ code: 'long_shift', date: shift.date, message: `Long shift warning: ${shift.paidHours.toFixed(2)} paid hours recorded.`, disclaimer });
+    if (shift.totalMinutes >= noBreakAfterHours * 60 && shift.totalBreakMinutes === 0) warnings.push({ code: 'no_break', date: shift.date, message: `No break warning: ${minutesToHours(shift.totalMinutes).toFixed(2)} hours recorded with no break.`, disclaimer });
+    if (index > 0) {
+      const prev = sorted[index - 1];
+      const restHours = (shiftDateTime(entry, 'startTime') - shiftDateTime(prev, 'finishTime')) / (60 * 60 * 1000);
+      if (restHours >= 0 && restHours < minimumRestHours) warnings.push({ code: 'short_rest', date: shift.date, message: `Short rest warning: ${restHours.toFixed(1)} hours between shifts.`, disclaimer });
+    }
+  });
+
+  const totalHours = calculateTotals(sorted).paidHours;
+  if (totalHours >= weeklyHours) warnings.push({ code: 'weekly_hours', date: sorted[sorted.length - 1]?.date || '', message: `Recent hours warning: ${totalHours.toFixed(2)} paid hours recorded in the selected history.`, disclaimer });
+  return warnings;
+}
+
+function buildEmergencyLocationMessage(location, { workerName = '', note = '', eventLabel = 'Emergency / breakdown check-in' } = {}) {
+  const map = locationMapUrl(location);
+  return [
+    eventLabel,
+    workerName ? `Worker: ${workerName}` : '',
+    note ? `Note: ${note}` : '',
+    location?.timestamp ? `Time: ${location.timestamp}` : '',
+    location?.accuracyMeters ? `GPS accuracy: approx ${location.accuracyMeters}m` : '',
+    map ? `Location: ${map}` : '',
+  ].filter(Boolean).join('\n');
+}
+
+function buildEmergencySmsHref(location, options = {}) {
+  const phone = options.phone || '';
+  return `sms:${encodeURIComponent(phone)}?body=${encodeURIComponent(buildEmergencyLocationMessage(location, options))}`;
+}
+
+function buildEmergencyMailtoHref(location, options = {}) {
+  const email = options.email || '';
+  const subject = options.subject || 'Emergency location check-in';
+  return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(buildEmergencyLocationMessage(location, options))}`;
 }
 
 if (typeof module !== 'undefined') {
@@ -263,5 +361,11 @@ if (typeof module !== 'undefined') {
     resumeTimerShift,
     finishTimerShift,
     timerShiftToEntry,
+    buildFatigueWarnings,
+    createLocationEvent,
+    locationMapUrl,
+    buildEmergencyLocationMessage,
+    buildEmergencySmsHref,
+    buildEmergencyMailtoHref,
   };
 }
