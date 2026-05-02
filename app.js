@@ -137,6 +137,7 @@ function saveSettings() {
     taxFreeThreshold: document.querySelector('#taxFreeThreshold').checked,
     workerName: document.querySelector('#workerName').value.trim(),
     payOfficeEmail: document.querySelector('#payOfficeEmail').value.trim(),
+    employerName: document.querySelector('#employerName').value.trim(),
   };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
@@ -152,6 +153,7 @@ function applyDefaults() {
   document.querySelector('#taxFreeThreshold').checked = settings.taxFreeThreshold !== false;
   document.querySelector('#workerName').value = settings.workerName || '';
   document.querySelector('#payOfficeEmail').value = settings.payOfficeEmail || '';
+  document.querySelector('#employerName').value = settings.employerName || '';
 }
 
 function getFormShift() {
@@ -174,7 +176,7 @@ function addShift(event) {
     alert('Please enter a date, start time, and finish time.');
     return;
   }
-  entries.push(shift);
+  entries.push(...repeatShift(shift, document.querySelector('#repeatCount').value, (index) => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${index}`)));
   entries = pruneEntriesToHistoryLimit(entries, todayISO(), FREE_HISTORY_DAYS);
   entries.sort((a, b) => `${b.date} ${b.startTime}`.localeCompare(`${a.date} ${a.startTime}`));
   saveEntries(entries);
@@ -215,12 +217,7 @@ function selectedEntries() {
 
 function renderSummary() {
   const { range, selected } = selectedEntries();
-  const totals = calculateTotals(selected);
-  const periodType = document.querySelector('#periodType').value === 'weekly' ? 'weekly' : 'fortnightly';
-  const taxFreeThreshold = document.querySelector('#taxFreeThreshold').checked;
-  const paygEstimate = paygTables[periodType]
-    ? calculateNetPayEstimate(paygTables[periodType], totals.grossPay, taxFreeThreshold)
-    : { withholding: 0, netPay: totals.grossPay };
+  const { totals, paygEstimate } = currentPayEstimate(selected);
 
   document.querySelector('#rangeLabel').textContent = `${range.start} to ${range.end}`;
   document.querySelector('#daysWorked').textContent = totals.daysWorked;
@@ -229,6 +226,16 @@ function renderSummary() {
   document.querySelector('#paygWithholding').textContent = money(paygEstimate.withholding);
   document.querySelector('#netPay').textContent = money(paygEstimate.netPay);
   document.querySelector('#totalBreaks').textContent = minutesLabel(totals.shifts.reduce((sum, shift) => sum + shift.breakMinutes, 0));
+}
+
+function currentPayEstimate(selected = selectedEntries().selected) {
+  const totals = calculateTotals(selected);
+  const periodType = document.querySelector('#periodType').value === 'weekly' ? 'weekly' : 'fortnightly';
+  const taxFreeThreshold = document.querySelector('#taxFreeThreshold').checked;
+  const paygEstimate = paygTables[periodType]
+    ? calculateNetPayEstimate(paygTables[periodType], totals.grossPay, taxFreeThreshold)
+    : { withholding: 0, netPay: totals.grossPay };
+  return { totals, paygEstimate };
 }
 
 function historyEntries() {
@@ -283,7 +290,7 @@ function currentTimesheetPayload() {
     range,
     entries: selected,
     workerName: document.querySelector('#workerName').value.trim(),
-    employer: '',
+    employer: document.querySelector('#employerName').value.trim(),
   };
 }
 
@@ -355,12 +362,70 @@ function downloadTimesheetCsv() {
   updateTimesheetStatus('CSV timesheet downloaded.');
 }
 
+function printTimesheet() {
+  const { selected } = selectedEntries();
+  if (!selected.length) {
+    updateTimesheetStatus('No shifts in the selected pay period to print.');
+    return;
+  }
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    updateTimesheetStatus('Pop-up blocked. Try Copy Text or CSV instead.');
+    return;
+  }
+  printWindow.document.open();
+  printWindow.document.write(buildTimesheetPrintHtml(currentTimesheetPayload()));
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+  updateTimesheetStatus('Print view opened. Choose Save as PDF from the print dialog.');
+}
+
+function renderPayslipComparison() {
+  const { selected } = selectedEntries();
+  const { totals, paygEstimate } = currentPayEstimate(selected);
+  const expectedSuper = estimateSuper(totals.grossPay);
+  const actual = {
+    actualGross: document.querySelector('#actualGross').value,
+    actualTax: document.querySelector('#actualTax').value,
+    actualNet: document.querySelector('#actualNet').value,
+    actualSuper: document.querySelector('#actualSuper').value,
+  };
+  const hasActual = Object.values(actual).some((value) => value !== '');
+  const comparisonBox = document.querySelector('#payslipComparison');
+  const status = document.querySelector('#payslipStatus');
+  if (!hasActual) {
+    status.textContent = `Expected: gross ${money(totals.grossPay)}, tax ${money(paygEstimate.withholding)}, net ${money(paygEstimate.netPay)}, super ${money(expectedSuper)}.`;
+    comparisonBox.innerHTML = '';
+    return;
+  }
+  const comparison = comparePayslip({
+    expectedGross: totals.grossPay,
+    expectedTax: paygEstimate.withholding,
+    expectedNet: paygEstimate.netPay,
+    expectedSuper,
+    ...actual,
+  });
+  status.textContent = comparison.overallStatus === 'under_expected'
+    ? 'Some payslip amounts are under the app estimate. Check the details before contacting payroll.'
+    : comparison.overallStatus === 'over_expected'
+      ? 'Some payslip amounts are over the app estimate. Check overtime, allowances, and tax settings.'
+      : 'Payslip amounts are within rounding tolerance of the app estimate.';
+  comparisonBox.innerHTML = [
+    ['Gross', comparison.gross],
+    ['Tax', comparison.tax],
+    ['Net', comparison.net],
+    ['Super', comparison.super],
+  ].map(([label, item]) => `<div class="compare-card ${item.status}"><div class="muted">${label}</div><div>Expected ${money(item.expected)}</div><div>Actual ${money(item.actual)}</div><div class="diff">${item.difference >= 0 ? '+' : ''}${money(item.difference)}</div></div>`).join('');
+}
+
 function render() {
   updateBreakDurations();
   saveSettings();
   renderSummary();
   renderEntries();
   updatePreview();
+  renderPayslipComparison();
   updateTimesheetStatus();
 }
 
@@ -402,6 +467,7 @@ document.querySelector('#emailTimesheet').addEventListener('click', emailTimeshe
 document.querySelector('#shareTimesheet').addEventListener('click', () => shareTimesheet().catch(() => updateTimesheetStatus('Unable to share this timesheet. Try Copy Text instead.')));
 document.querySelector('#copyTimesheet').addEventListener('click', () => copyTimesheet().catch(() => updateTimesheetStatus('Unable to copy automatically. Try Email Timesheet instead.')));
 document.querySelector('#downloadTimesheetCsv').addEventListener('click', downloadTimesheetCsv);
+document.querySelector('#printTimesheet').addEventListener('click', printTimesheet);
 document.querySelector('#addBreakRow').addEventListener('click', () => {
   addBreakRow();
   render();

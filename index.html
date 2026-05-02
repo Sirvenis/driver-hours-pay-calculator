@@ -112,6 +112,13 @@
     .preview { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
     .actions, .timesheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
     .entry { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; background: #07111f; border: 1px solid var(--line); border-radius: 17px; padding: 13px; margin: 10px 0; }
+    .comparison-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+    .compare-card { background: #07111f; border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
+    .compare-card .diff { font-size: 1.05rem; font-weight: 950; margin-top: 5px; }
+    .compare-card.under .diff { color: var(--red); }
+    .compare-card.over .diff { color: var(--yellow); }
+    .compare-card.match .diff { color: var(--green); }
+    .status-banner { margin-top: 12px; padding: 12px; border-radius: 15px; background: #07111f; border: 1px solid var(--line); color: #dbeafe; font-weight: 750; }
     .entry-pay { color: var(--green); font-weight: 950; text-align: right; font-size: 1.08rem; }
     .entry-right { text-align: right; }
     .delete { background: transparent; border: 1px solid #7f1d1d; color: #fca5a5; border-radius: 10px; padding: 7px 9px; margin-top: 8px; }
@@ -120,7 +127,7 @@
     .hint { color: var(--muted); font-size: .84rem; line-height: 1.45; margin: 10px 0 0; }
     footer { text-align: center; color: #61728b; font-size: .78rem; padding: 10px 0 20px; }
     @media (max-width: 390px) { .break-row { grid-template-columns: 28px 1fr 1fr 62px 30px; gap: 4px; } .break-number { font-size: .74rem; } .break-row input { font-size: .86rem; padding: 8px 4px; } .break-duration { font-size: .78rem; padding: 8px 3px; } }
-    @media (max-width: 390px) { .grid, .summary, .preview, .actions, .timesheet-actions { grid-template-columns: 1fr; } .value { font-size: 1.38rem; } }
+    @media (max-width: 390px) { .grid, .summary, .preview, .actions, .timesheet-actions, .comparison-grid { grid-template-columns: 1fr; } .value { font-size: 1.38rem; } }
   </style>
 </head>
 <body>
@@ -178,6 +185,7 @@
           <div><label for="startTime">Start time</label><input id="startTime" type="time" value="07:00" required></div>
           <div><label for="finishTime">Finish time</label><input id="finishTime" type="time" value="17:00" required></div>
           <div><label for="note">Note, optional</label><input id="note" type="text" placeholder="Job, site, shift, etc."></div>
+          <div><label for="repeatCount">Repeat days</label><input id="repeatCount" type="number" inputmode="numeric" min="1" max="14" step="1" value="1"></div>
         </div>
         <div class="break-grid">
           <h3>Detailed breaks, paid upgrade preview</h3>
@@ -209,6 +217,7 @@
       <p class="hint">Create a timesheet for the selected pay period. Email opens your mail app; Share uses your phone share sheet when available.</p>
       <div class="grid">
         <div><label for="workerName">Worker name, optional</label><input id="workerName" type="text" placeholder="Your name"></div>
+        <div><label for="employerName">Employer/site, optional</label><input id="employerName" type="text" placeholder="Depot, client, employer"></div>
         <div><label for="payOfficeEmail">Pay office email, optional</label><input id="payOfficeEmail" type="email" placeholder="payoffice@example.com"></div>
       </div>
       <div class="timesheet-actions">
@@ -216,8 +225,22 @@
         <button id="shareTimesheet" class="secondary" type="button">Share</button>
         <button id="copyTimesheet" class="secondary" type="button">Copy Text</button>
         <button id="downloadTimesheetCsv" class="secondary" type="button">Download CSV</button>
+        <button id="printTimesheet" class="secondary" type="button">Print / Save PDF</button>
       </div>
       <p class="hint" id="timesheetStatus">Uses shifts inside the selected pay period above.</p>
+    </section>
+
+    <section class="card">
+      <h2>Payslip Comparison</h2>
+      <p class="hint">Enter the actual figures from your payslip and compare them with the selected pay period estimate. Super defaults to 12% of gross pay.</p>
+      <div class="grid">
+        <div><label for="actualGross">Actual gross on payslip</label><input id="actualGross" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+        <div><label for="actualTax">Actual tax withheld</label><input id="actualTax" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+        <div><label for="actualNet">Actual net paid</label><input id="actualNet" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+        <div><label for="actualSuper">Actual super</label><input id="actualSuper" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+      </div>
+      <div id="payslipStatus" class="status-banner">Enter payslip amounts to compare.</div>
+      <div id="payslipComparison" class="comparison-grid"></div>
     </section>
 
     <section class="card">
@@ -232,6 +255,7 @@
 
   <script src="calculator.js"></script>
   <script src="timesheet.js"></script>
+  <script src="payslip.js"></script>
   <script src="payg.js"></script>
   <script src="app.js"></script>
 </body>

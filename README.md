@@ -19,15 +19,17 @@ Paid-version prototype now added locally:
 - Tax-free threshold toggle
 - Net pay estimate, calculated as gross pay minus PAYG withholding
 - Multiple detailed break start/finish times for employer-ready records, with each break marked paid or unpaid
-- Timesheet generation for the selected pay period, with email, phone share sheet, copy text, and CSV download options
+- Timesheet generation for the selected pay period, with email, phone share sheet, copy text, CSV download, and print/save-to-PDF options
+- Manual payslip comparison against expected gross, PAYG withholding, net pay, and 12% super estimate
+- Repeat-days shift entry for quickly adding the same shift across consecutive dates
+- Employer/site field in timesheet exports
 - Tested JSON lookup data converted from the ATO weekly and fortnightly tables
 
 Remaining paid upgrade ideas:
 
 - Longer/unlimited history
 - Multiple jobs/employers
-- Export to CSV/PDF
-- Payslip comparison
+- Payslip OCR / upload
 - Overtime/penalty/allowance rules
 
 Tax table source files kept outside the app for now:

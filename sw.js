@@ -1,9 +1,10 @@
-const CACHE_NAME = 'wagecheck-au-v11';
+const CACHE_NAME = 'wagecheck-au-v12';
 const APP_FILES = [
   './',
   './index.html',
   './calculator.js',
   './timesheet.js',
+  './payslip.js',
   './payg.js',
   './app.js',
   './data/payg-weekly-2024.json',

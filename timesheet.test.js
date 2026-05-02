@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { buildTimesheetText, buildTimesheetCsv, formatTimesheetBreaks } = require('./timesheet.js');
+const { buildTimesheetText, buildTimesheetCsv, buildTimesheetPrintHtml, formatTimesheetBreaks } = require('./timesheet.js');
 
 function testFormatTimesheetBreaksShowsPaidAndUnpaidDurations() {
   const text = formatTimesheetBreaks([
@@ -61,10 +61,37 @@ function testBuildTimesheetCsvEscapesNotesAndIncludesRows() {
   assert.ok(csv.includes('2026-05-02,07:00,17:00,12:00-12:30 unpaid 30m,30,0,9.50,332.50,"Site A, dock 4"'));
 }
 
+function testBuildTimesheetPrintHtmlIncludesPrintableTableAndTotals() {
+  const html = buildTimesheetPrintHtml({
+    range: { start: '2026-05-02', end: '2026-05-15' },
+    workerName: 'Andrew',
+    employer: 'Depot A',
+    entries: [
+      {
+        date: '2026-05-02',
+        startTime: '07:00',
+        finishTime: '17:00',
+        hourlyRate: 35,
+        breaks: [{ startTime: '12:00', finishTime: '12:30', paid: false }],
+        note: 'Site <A>',
+      },
+    ],
+  });
+
+  assert.ok(html.includes('<title>WageCheck AU Timesheet 2026-05-02 to 2026-05-15</title>'));
+  assert.ok(html.includes('Worker: Andrew'));
+  assert.ok(html.includes('Employer/site: Depot A'));
+  assert.ok(html.includes('<td>2026-05-02</td>'));
+  assert.ok(html.includes('Site &lt;A&gt;'));
+  assert.ok(html.includes('Total paid hours'));
+  assert.ok(html.includes('$332.50'));
+}
+
 const tests = [
   testFormatTimesheetBreaksShowsPaidAndUnpaidDurations,
   testBuildTimesheetTextIncludesPeriodRowsAndTotals,
   testBuildTimesheetCsvEscapesNotesAndIncludesRows,
+  testBuildTimesheetPrintHtmlIncludesPrintableTableAndTotals,
 ];
 
 for (const test of tests) {

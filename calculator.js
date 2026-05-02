@@ -125,6 +125,17 @@ function periodRange(anchorDate, periodType) {
   return { start: toISODate(start), end: toISODate(addDays(start, days - 1)) };
 }
 
+function repeatShift(shift, count, idFactory = (index) => `${Date.now()}-${index}`) {
+  const repeatCount = Math.max(1, Math.floor(cleanNumber(count, 1)));
+  const start = parseISODate(shift.date);
+  return Array.from({ length: repeatCount }, (_, index) => ({
+    ...shift,
+    id: idFactory(index),
+    date: toISODate(addDays(start, index)),
+    breaks: (shift.breaks || []).map((breakRow) => ({ ...breakRow })),
+  }));
+}
+
 function filterEntriesByRange(entries, start, end) {
   return (entries || []).filter((entry) => entry.date >= start && entry.date <= end);
 }
@@ -152,6 +163,7 @@ if (typeof module !== 'undefined') {
     calculateBreakMinutes,
     minutesToHours,
     periodRange,
+    repeatShift,
     filterEntriesByRange,
     historyRange,
     filterEntriesByHistoryRange,

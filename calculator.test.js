@@ -8,6 +8,7 @@ const {
   historyRange,
   filterEntriesByHistoryRange,
   pruneEntriesToHistoryLimit,
+  repeatShift,
 } = require('./calculator.js');
 
 function nearlyEqual(actual, expected, tolerance = 0.001) {
@@ -188,6 +189,23 @@ function testMinutesToHours() {
   nearlyEqual(minutesToHours(90), 1.5);
 }
 
+function testRepeatShiftCreatesConsecutiveCopiesWithFreshIds() {
+  const repeated = repeatShift({
+    id: 'original',
+    date: '2026-05-01',
+    startTime: '07:00',
+    finishTime: '15:00',
+    breaks: [{ startTime: '12:00', finishTime: '12:30', paid: false }],
+    hourlyRate: 35,
+    note: 'Site A',
+  }, 3, (index) => `copy-${index}`);
+
+  assert.deepStrictEqual(repeated.map((entry) => entry.date), ['2026-05-01', '2026-05-02', '2026-05-03']);
+  assert.deepStrictEqual(repeated.map((entry) => entry.id), ['copy-0', 'copy-1', 'copy-2']);
+  assert.strictEqual(repeated[1].startTime, '07:00');
+  assert.strictEqual(repeated[1].breaks[0].finishTime, '12:30');
+}
+
 function testHistoryRangeDefaultsToFourteenDaysIncludingAnchorDate() {
   const range = historyRange('2026-05-14');
   assert.deepStrictEqual(range, { start: '2026-05-01', end: '2026-05-14' });
@@ -234,6 +252,7 @@ const tests = [
   testPeriodRangeUnknownDefaultsToFortnightlyStartDate,
   testFortnightlyTotalsIncludeBothWeeksFromStartDate,
   testMinutesToHours,
+  testRepeatShiftCreatesConsecutiveCopiesWithFreshIds,
   testHistoryRangeDefaultsToFourteenDaysIncludingAnchorDate,
   testFilterEntriesByHistoryRangeShowsFourteenDaysOnly,
   testPruneEntriesToFreeFourteenDayHistory,
