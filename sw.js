@@ -1,5 +1,15 @@
-const CACHE_NAME = 'wagecheck-au-v3';
-const APP_FILES = ['./', './index.html', './calculator.js', './app.js', './manifest.webmanifest', './icon.svg'];
+const CACHE_NAME = 'wagecheck-au-v6';
+const APP_FILES = [
+  './',
+  './index.html',
+  './calculator.js',
+  './payg.js',
+  './app.js',
+  './data/payg-weekly-2024.json',
+  './data/payg-fortnightly-2024.json',
+  './manifest.webmanifest',
+  './icon.svg',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES)));

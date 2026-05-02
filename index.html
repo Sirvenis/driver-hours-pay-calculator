@@ -73,6 +73,9 @@
       box-shadow: 0 18px 45px rgba(0,0,0,.22);
     }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .break-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .break-grid h3 { grid-column: 1 / -1; margin: 8px 0 0; font-size: .95rem; }
+    .break-grid .hint { grid-column: 1 / -1; margin-top: 0; }
     label { display: block; color: var(--muted); font-size: .8rem; margin: 0 0 6px; }
     input, select {
       width: 100%;
@@ -86,6 +89,9 @@
     }
     input:focus, select:focus { outline: 2px solid rgba(96,165,250,.28); border-color: var(--blue); }
     .summary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .paid-options { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 12px 0; }
+    .check-row { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: .92rem; }
+    .check-row input { width: auto; min-height: auto; }
     .result { background: #07111f; border: 1px solid var(--line); border-radius: 18px; padding: 14px; min-height: 88px; }
     .result.wide { grid-column: 1 / -1; }
     .value { font-size: 1.55rem; font-weight: 950; color: var(--blue); line-height: 1.1; }
@@ -121,7 +127,7 @@
 
     <section class="card">
       <h2>Pay Period Summary</h2>
-      <p class="hint">Free version shows gross pay estimates. Australian PAYG tax table support is planned for paid upgrades.</p>
+      <p class="hint">Gross pay is always an estimate. Paid-version prototype adds Australian PAYG withholding and net pay estimates from ATO weekly/fortnightly tables.</p>
       <div class="grid">
         <div>
           <label for="periodType">Pay period</label>
@@ -136,8 +142,16 @@
         </div>
       </div>
       <p class="range" id="rangeLabel">-</p>
+      <div class="paid-options">
+        <label class="check-row" for="taxFreeThreshold">
+          <input id="taxFreeThreshold" type="checkbox" checked>
+          Claim tax-free threshold for PAYG estimate
+        </label>
+      </div>
       <div class="summary">
         <div class="result"><div id="grossPay" class="value green">$0</div><div class="label-text">Gross pay</div></div>
+        <div class="result"><div id="netPay" class="value green">$0</div><div class="label-text">Net pay estimate</div></div>
+        <div class="result"><div id="paygWithholding" class="value yellow">$0</div><div class="label-text">PAYG withholding estimate</div></div>
         <div class="result"><div id="paidHours" class="value">0h</div><div class="label-text">Paid hours</div></div>
         <div class="result"><div id="daysWorked" class="value yellow">0</div><div class="label-text">Days worked</div></div>
         <div class="result"><div id="totalBreaks" class="value">0m</div><div class="label-text">Unpaid breaks</div></div>
@@ -152,8 +166,30 @@
           <div><label for="hourlyRate">Hourly rate</label><input id="hourlyRate" type="number" inputmode="decimal" min="0" step="0.01" value="35.00"></div>
           <div><label for="startTime">Start time</label><input id="startTime" type="time" value="07:00" required></div>
           <div><label for="finishTime">Finish time</label><input id="finishTime" type="time" value="17:00" required></div>
-          <div><label for="breakMinutes">Breaks, minutes</label><input id="breakMinutes" type="number" inputmode="numeric" min="0" value="30"></div>
+          <div><label for="breakMinutes">Simple break total, minutes</label><input id="breakMinutes" type="number" inputmode="numeric" min="0" value="30"></div>
           <div><label for="note">Note, optional</label><input id="note" type="text" placeholder="Job, site, shift, etc."></div>
+        </div>
+        <div class="break-grid">
+          <h3>Detailed breaks, paid upgrade preview</h3>
+          <p class="hint">Add actual break start and finish times when an employer needs detailed records. Mark each break as unpaid or paid. WageCheck subtracts only unpaid breaks from pay, while paid breaks stay in paid hours.</p>
+          <div><label for="break1Start">Break 1 start</label><input id="break1Start" class="break-start" type="time"></div>
+          <div><label for="break1Finish">Break 1 finish</label><input id="break1Finish" class="break-finish" type="time"></div>
+          <div><label for="break1Paid">Break 1 type</label><select id="break1Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
+          <div><label for="break2Start">Break 2 start</label><input id="break2Start" class="break-start" type="time"></div>
+          <div><label for="break2Finish">Break 2 finish</label><input id="break2Finish" class="break-finish" type="time"></div>
+          <div><label for="break2Paid">Break 2 type</label><select id="break2Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
+          <div><label for="break3Start">Break 3 start</label><input id="break3Start" class="break-start" type="time"></div>
+          <div><label for="break3Finish">Break 3 finish</label><input id="break3Finish" class="break-finish" type="time"></div>
+          <div><label for="break3Paid">Break 3 type</label><select id="break3Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
+          <div><label for="break4Start">Break 4 start</label><input id="break4Start" class="break-start" type="time"></div>
+          <div><label for="break4Finish">Break 4 finish</label><input id="break4Finish" class="break-finish" type="time"></div>
+          <div><label for="break4Paid">Break 4 type</label><select id="break4Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
+          <div><label for="break5Start">Break 5 start</label><input id="break5Start" class="break-start" type="time"></div>
+          <div><label for="break5Finish">Break 5 finish</label><input id="break5Finish" class="break-finish" type="time"></div>
+          <div><label for="break5Paid">Break 5 type</label><select id="break5Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
+          <div><label for="break6Start">Break 6 start</label><input id="break6Start" class="break-start" type="time"></div>
+          <div><label for="break6Finish">Break 6 finish</label><input id="break6Finish" class="break-finish" type="time"></div>
+          <div><label for="break6Paid">Break 6 type</label><select id="break6Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
         </div>
         <div class="preview">
           <div class="result"><div id="previewHours" class="value">0h</div><div class="label-text">This shift hours</div></div>
@@ -171,13 +207,14 @@
       <h2>14-Day Shift History</h2>
       <p class="range" id="historyRangeLabel">-</p>
       <div id="entryList"></div>
-      <p class="hint">Free version keeps and shows your most recent 14 days of shifts all at once. Paid upgrades can add longer history, PAYG tax estimates, exports, and multiple jobs.</p>
+      <p class="hint">Free version keeps and shows your most recent 14 days of shifts all at once. Paid upgrades can add longer history, exports, multiple jobs, and payslip comparison.</p>
     </section>
 
     <footer>WageCheck AU — offline mobile app for Australian workers</footer>
   </main>
 
   <script src="calculator.js"></script>
+  <script src="payg.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

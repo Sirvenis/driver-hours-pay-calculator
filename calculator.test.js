@@ -2,6 +2,7 @@ const assert = require('assert');
 const {
   calculateShift,
   calculateTotals,
+  calculateBreakMinutes,
   minutesToHours,
   periodRange,
   historyRange,
@@ -54,6 +55,90 @@ function testBreakCannotMakeNegativePay() {
 
   assert.strictEqual(result.paidMinutes, 0);
   nearlyEqual(result.grossPay, 0);
+}
+
+function testMultipleTimedBreaksAreSubtractedFromShiftPay() {
+  const result = calculateShift({
+    date: '2026-04-30',
+    startTime: '06:00',
+    finishTime: '18:00',
+    breaks: [
+      { startTime: '09:00', finishTime: '09:15' },
+      { startTime: '12:00', finishTime: '12:30' },
+      { startTime: '15:00', finishTime: '15:10' },
+      { startTime: '17:00', finishTime: '17:05' },
+    ],
+    hourlyRate: 40,
+  });
+
+  assert.strictEqual(result.breakMinutes, 60);
+  assert.strictEqual(result.totalMinutes, 720);
+  assert.strictEqual(result.paidMinutes, 660);
+  nearlyEqual(result.paidHours, 11);
+  nearlyEqual(result.grossPay, 440);
+}
+
+function testTimedBreaksFallbackToLegacyBreakMinutesWhenNoBreakRowsProvided() {
+  const result = calculateShift({
+    date: '2026-04-30',
+    startTime: '07:00',
+    finishTime: '17:00',
+    breakMinutes: 30,
+    breaks: [],
+    hourlyRate: 35,
+  });
+
+  assert.strictEqual(result.breakMinutes, 30);
+  assert.strictEqual(result.paidMinutes, 570);
+}
+
+function testPaidTimedBreaksAreNotSubtractedFromShiftPay() {
+  const result = calculateShift({
+    date: '2026-04-30',
+    startTime: '07:00',
+    finishTime: '17:00',
+    breaks: [
+      { startTime: '09:00', finishTime: '09:15', paid: true },
+      { startTime: '12:00', finishTime: '12:30', paid: false },
+      { startTime: '15:00', finishTime: '15:10', paid: true },
+    ],
+    hourlyRate: 35,
+  });
+
+  assert.strictEqual(result.breakMinutes, 30);
+  assert.strictEqual(result.paidBreakMinutes, 25);
+  assert.strictEqual(result.totalBreakMinutes, 55);
+  assert.strictEqual(result.totalMinutes, 600);
+  assert.strictEqual(result.paidMinutes, 570);
+  nearlyEqual(result.grossPay, 332.5);
+}
+
+function testTimedBreakRowsDefaultToUnpaidForBackwardCompatibility() {
+  const minutes = calculateBreakMinutes([
+    { startTime: '09:00', finishTime: '09:15' },
+    { startTime: '12:00', finishTime: '12:30', paid: true },
+  ], 0);
+
+  assert.strictEqual(minutes, 15);
+}
+
+function testOvernightTimedBreakCanCrossMidnight() {
+  const minutes = calculateBreakMinutes([
+    { startTime: '23:45', finishTime: '00:15' },
+    { startTime: '03:00', finishTime: '03:20' },
+  ], 0);
+
+  assert.strictEqual(minutes, 50);
+}
+
+function testIncompleteTimedBreakRowsAreIgnored() {
+  const minutes = calculateBreakMinutes([
+    { startTime: '09:00', finishTime: '09:15' },
+    { startTime: '12:00', finishTime: '' },
+    { startTime: '', finishTime: '15:10' },
+  ], 0);
+
+  assert.strictEqual(minutes, 15);
 }
 
 function testTotalsForMultipleEntries() {
@@ -137,6 +222,12 @@ const tests = [
   testDayShiftWithBreak,
   testOvernightShift,
   testBreakCannotMakeNegativePay,
+  testMultipleTimedBreaksAreSubtractedFromShiftPay,
+  testTimedBreaksFallbackToLegacyBreakMinutesWhenNoBreakRowsProvided,
+  testPaidTimedBreaksAreNotSubtractedFromShiftPay,
+  testTimedBreakRowsDefaultToUnpaidForBackwardCompatibility,
+  testOvernightTimedBreakCanCrossMidnight,
+  testIncompleteTimedBreakRowsAreIgnored,
   testTotalsForMultipleEntries,
   testPeriodRangeWeeklyUsesSelectedDateAsPayPeriodStart,
   testPeriodRangeFortnightlyUsesSelectedDateAsPayPeriodStart,

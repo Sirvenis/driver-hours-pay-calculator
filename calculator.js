@@ -14,11 +14,47 @@ function parseTimeToMinutes(time) {
   return hours * 60 + minutes;
 }
 
+function calculateTimedBreakMinutes(breakRow) {
+  if (!breakRow || !breakRow.startTime || !breakRow.finishTime) return 0;
+  const startMinutes = parseTimeToMinutes(breakRow.startTime);
+  let finishMinutes = parseTimeToMinutes(breakRow.finishTime);
+  if (finishMinutes < startMinutes) {
+    finishMinutes += 24 * 60;
+  }
+  return Math.max(0, finishMinutes - startMinutes);
+}
+
+function validTimedBreaks(breaks) {
+  return (breaks || []).filter((breakRow) => breakRow && breakRow.startTime && breakRow.finishTime);
+}
+
+function calculateBreakMinutes(breaks, fallbackBreakMinutes = 0) {
+  const validBreaks = validTimedBreaks(breaks);
+  if (!validBreaks.length) return Math.max(0, cleanNumber(fallbackBreakMinutes));
+  return validBreaks
+    .filter((breakRow) => breakRow.paid !== true)
+    .reduce((sum, breakRow) => sum + calculateTimedBreakMinutes(breakRow), 0);
+}
+
+function calculatePaidBreakMinutes(breaks) {
+  return validTimedBreaks(breaks)
+    .filter((breakRow) => breakRow.paid === true)
+    .reduce((sum, breakRow) => sum + calculateTimedBreakMinutes(breakRow), 0);
+}
+
+function calculateTotalBreakMinutes(breaks, fallbackBreakMinutes = 0) {
+  const validBreaks = validTimedBreaks(breaks);
+  if (!validBreaks.length) return Math.max(0, cleanNumber(fallbackBreakMinutes));
+  return validBreaks.reduce((sum, breakRow) => sum + calculateTimedBreakMinutes(breakRow), 0);
+}
+
 function calculateShift(input) {
   const date = input.date || '';
   const startTime = input.startTime || '00:00';
   const finishTime = input.finishTime || '00:00';
-  const breakMinutes = Math.max(0, cleanNumber(input.breakMinutes));
+  const breakMinutes = calculateBreakMinutes(input.breaks, input.breakMinutes);
+  const paidBreakMinutes = calculatePaidBreakMinutes(input.breaks);
+  const totalBreakMinutes = calculateTotalBreakMinutes(input.breaks, input.breakMinutes);
   const hourlyRate = Math.max(0, cleanNumber(input.hourlyRate));
 
   const startMinutes = parseTimeToMinutes(startTime);
@@ -39,6 +75,8 @@ function calculateShift(input) {
     startTime,
     finishTime,
     breakMinutes,
+    paidBreakMinutes,
+    totalBreakMinutes,
     hourlyRate,
     totalMinutes,
     paidMinutes,
@@ -111,6 +149,7 @@ if (typeof module !== 'undefined') {
   module.exports = {
     calculateShift,
     calculateTotals,
+    calculateBreakMinutes,
     minutesToHours,
     periodRange,
     filterEntriesByRange,
