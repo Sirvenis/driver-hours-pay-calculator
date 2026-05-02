@@ -76,9 +76,14 @@
     .break-grid { display: grid; gap: 10px; margin-top: 10px; }
     .break-grid h3 { margin: 8px 0 0; font-size: .95rem; }
     .break-grid .hint { margin-top: 0; }
-    .break-rows { display: grid; gap: 10px; }
-    .break-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; }
-    .remove-break { background: transparent; border: 1px solid #7f1d1d; color: #fca5a5; border-radius: 10px; padding: 10px 12px; min-height: 48px; }
+    .break-rows { display: grid; gap: 8px; }
+    .break-row { display: grid; grid-template-columns: 34px 1fr 1fr 74px 34px; gap: 6px; align-items: center; }
+    .break-number { color: var(--muted); font-weight: 850; font-size: .82rem; text-align: center; }
+    .break-row input { min-height: 40px; padding: 8px 7px; border-radius: 11px; font-size: .93rem; }
+    .break-duration { border: 1px solid var(--line); background: #07111f; border-radius: 11px; min-height: 40px; padding: 8px 5px; font-weight: 950; font-size: .86rem; }
+    .break-duration.paid { color: var(--green); border-color: rgba(34,197,94,.45); }
+    .break-duration.unpaid { color: var(--red); border-color: rgba(251,113,133,.45); }
+    .remove-break { background: transparent; border: 1px solid #7f1d1d; color: #fca5a5; border-radius: 10px; padding: 0; min-height: 40px; font-size: 1.05rem; }
     .add-break { width: 100%; }
     label { display: block; color: var(--muted); font-size: .8rem; margin: 0 0 6px; }
     input, select {
@@ -101,19 +106,20 @@
     .value { font-size: 1.55rem; font-weight: 950; color: var(--blue); line-height: 1.1; }
     .value.green { color: var(--green); }
     .value.yellow { color: var(--yellow); }
+    .value.red { color: var(--red); }
     .label-text, .muted { color: var(--muted); font-size: .78rem; margin-top: 6px; }
     .range { color: #bfdbfe; font-size: .86rem; margin: -5px 0 12px; }
     .preview { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
     .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
     .entry { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; background: #07111f; border: 1px solid var(--line); border-radius: 17px; padding: 13px; margin: 10px 0; }
-    .entry-pay { color: var(--green); font-weight: 950; text-align: right; font-size: 1.08rem; }
+    .entry-pay { color: var(--red); font-weight: 950; text-align: right; font-size: 1.08rem; }
     .entry-right { text-align: right; }
     .delete { background: transparent; border: 1px solid #7f1d1d; color: #fca5a5; border-radius: 10px; padding: 7px 9px; margin-top: 8px; }
     .note { color: #dbeafe; font-size: .86rem; margin-top: 7px; }
     .empty { color: var(--muted); text-align: center; padding: 24px 8px; border: 1px dashed var(--line); border-radius: 16px; }
     .hint { color: var(--muted); font-size: .84rem; line-height: 1.45; margin: 10px 0 0; }
     footer { text-align: center; color: #61728b; font-size: .78rem; padding: 10px 0 20px; }
-    @media (max-width: 520px) { .break-row { grid-template-columns: 1fr; } .remove-break { width: 100%; } }
+    @media (max-width: 390px) { .break-row { grid-template-columns: 28px 1fr 1fr 62px 30px; gap: 4px; } .break-number { font-size: .74rem; } .break-row input { font-size: .86rem; padding: 8px 4px; } .break-duration { font-size: .78rem; padding: 8px 3px; } }
     @media (max-width: 390px) { .grid, .summary, .preview, .actions { grid-template-columns: 1fr; } .value { font-size: 1.38rem; } }
   </style>
 </head>
@@ -154,7 +160,7 @@
         </label>
       </div>
       <div class="summary">
-        <div class="result"><div id="grossPay" class="value green">$0</div><div class="label-text">Gross pay</div></div>
+        <div class="result"><div id="grossPay" class="value red">$0</div><div class="label-text">Gross pay</div></div>
         <div class="result"><div id="netPay" class="value green">$0</div><div class="label-text">Net pay estimate</div></div>
         <div class="result"><div id="paygWithholding" class="value yellow">$0</div><div class="label-text">PAYG withholding estimate</div></div>
         <div class="result"><div id="paidHours" class="value">0h</div><div class="label-text">Paid hours</div></div>
@@ -176,19 +182,20 @@
         </div>
         <div class="break-grid">
           <h3>Detailed breaks, paid upgrade preview</h3>
-          <p class="hint">Add actual break start and finish times when an employer needs detailed records. Mark each break as unpaid or paid. Use + if you need another break.</p>
+          <p class="hint">Add start and finish times. Tap the break length to switch between unpaid red and paid green. Use + if you need another break.</p>
           <div id="breakRows" class="break-rows">
             <div class="break-row">
-              <div><label for="break1Start">Break 1 start</label><input id="break1Start" class="break-start" type="time"></div>
-              <div><label for="break1Finish">Break 1 finish</label><input id="break1Finish" class="break-finish" type="time"></div>
-              <div><label for="break1Paid">Break 1 type</label><select id="break1Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
+              <div class="break-number">B1</div>
+              <input id="break1Start" class="break-start" type="time" aria-label="Break 1 start">
+              <input id="break1Finish" class="break-finish" type="time" aria-label="Break 1 finish">
+              <button class="break-duration unpaid" type="button" data-paid="false" aria-label="Break 1 unpaid duration">0m</button>
             </div>
           </div>
           <button id="addBreakRow" class="secondary add-break" type="button">+ Add another break</button>
         </div>
         <div class="preview">
           <div class="result"><div id="previewHours" class="value">0h</div><div class="label-text">This shift hours</div></div>
-          <div class="result"><div id="previewPay" class="value green">$0</div><div class="label-text">This shift pay</div></div>
+          <div class="result"><div id="previewPay" class="value red">$0</div><div class="label-text">This shift pay</div></div>
         </div>
         <button class="primary" type="submit">Save Shift</button>
       </form>

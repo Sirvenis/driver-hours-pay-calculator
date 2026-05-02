@@ -48,11 +48,38 @@ function loadSettings() {
 function breakRowTemplate(number, removable = true) {
   return `
     <div class="break-row">
-      <div><label for="break${number}Start">Break ${number} start</label><input id="break${number}Start" class="break-start" type="time"></div>
-      <div><label for="break${number}Finish">Break ${number} finish</label><input id="break${number}Finish" class="break-finish" type="time"></div>
-      <div><label for="break${number}Paid">Break ${number} type</label><select id="break${number}Paid" class="break-paid"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
-      ${removable ? '<button class="remove-break" type="button" aria-label="Remove break">Remove</button>' : ''}
+      <div class="break-number">B${number}</div>
+      <input id="break${number}Start" class="break-start" type="time" aria-label="Break ${number} start">
+      <input id="break${number}Finish" class="break-finish" type="time" aria-label="Break ${number} finish">
+      <button class="break-duration unpaid" type="button" data-paid="false" aria-label="Break ${number} unpaid duration">0m</button>
+      ${removable ? '<button class="remove-break" type="button" aria-label="Remove break">×</button>' : ''}
     </div>`;
+}
+
+function breakDurationMinutes(startTime, finishTime) {
+  if (!startTime || !finishTime) return 0;
+  const [startHours, startMinutes] = startTime.split(':').map(Number);
+  const [finishHours, finishMinutes] = finishTime.split(':').map(Number);
+  if (![startHours, startMinutes, finishHours, finishMinutes].every(Number.isFinite)) return 0;
+  const start = startHours * 60 + startMinutes;
+  let finish = finishHours * 60 + finishMinutes;
+  if (finish < start) finish += 24 * 60;
+  return Math.max(0, finish - start);
+}
+
+function updateBreakDurations() {
+  document.querySelectorAll('#breakRows .break-row').forEach((row, index) => {
+    const number = index + 1;
+    const start = row.querySelector('.break-start');
+    const finish = row.querySelector('.break-finish');
+    const duration = row.querySelector('.break-duration');
+    const minutes = breakDurationMinutes(start.value, finish.value);
+    const paid = duration.dataset.paid === 'true';
+    duration.textContent = minutesLabel(minutes);
+    duration.classList.toggle('paid', paid);
+    duration.classList.toggle('unpaid', !paid);
+    duration.setAttribute('aria-label', `Break ${number} ${paid ? 'paid' : 'unpaid'} duration ${minutesLabel(minutes)}`);
+  });
 }
 
 function renumberBreakRows() {
@@ -60,20 +87,18 @@ function renumberBreakRows() {
     const number = index + 1;
     const start = row.querySelector('.break-start');
     const finish = row.querySelector('.break-finish');
-    const paid = row.querySelector('.break-paid');
-    const labels = row.querySelectorAll('label');
+    const duration = row.querySelector('.break-duration');
+    const breakNumber = row.querySelector('.break-number');
     start.id = `break${number}Start`;
     finish.id = `break${number}Finish`;
-    paid.id = `break${number}Paid`;
-    labels[0].setAttribute('for', start.id);
-    labels[0].textContent = `Break ${number} start`;
-    labels[1].setAttribute('for', finish.id);
-    labels[1].textContent = `Break ${number} finish`;
-    labels[2].setAttribute('for', paid.id);
-    labels[2].textContent = `Break ${number} type`;
+    start.setAttribute('aria-label', `Break ${number} start`);
+    finish.setAttribute('aria-label', `Break ${number} finish`);
+    breakNumber.textContent = `B${number}`;
+    duration.setAttribute('aria-label', `Break ${number} ${duration.dataset.paid === 'true' ? 'paid' : 'unpaid'} duration`);
     const removeButton = row.querySelector('.remove-break');
     if (removeButton) removeButton.hidden = index === 0;
   });
+  updateBreakDurations();
 }
 
 function addBreakRow() {
@@ -87,7 +112,7 @@ function getBreakRows() {
   return Array.from(document.querySelectorAll('#breakRows .break-row')).map((row) => ({
     startTime: row.querySelector('.break-start').value,
     finishTime: row.querySelector('.break-finish').value,
-    paid: row.querySelector('.break-paid').value === 'paid',
+    paid: row.querySelector('.break-duration').dataset.paid === 'true',
   })).filter((breakRow) => breakRow.startTime || breakRow.finishTime);
 }
 
@@ -249,6 +274,7 @@ function updatePreview() {
 }
 
 function render() {
+  updateBreakDurations();
   saveSettings();
   renderSummary();
   renderEntries();
@@ -294,6 +320,11 @@ document.querySelector('#addBreakRow').addEventListener('click', () => {
   render();
 });
 document.querySelector('#breakRows').addEventListener('click', (event) => {
+  if (event.target.classList.contains('break-duration')) {
+    event.target.dataset.paid = event.target.dataset.paid === 'true' ? 'false' : 'true';
+    render();
+    return;
+  }
   if (!event.target.classList.contains('remove-break')) return;
   event.target.closest('.break-row').remove();
   renumberBreakRows();
