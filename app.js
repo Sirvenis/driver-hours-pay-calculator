@@ -156,7 +156,7 @@ function getFormShift() {
     date: document.querySelector('#date').value,
     startTime: document.querySelector('#startTime').value,
     finishTime: document.querySelector('#finishTime').value,
-    breakMinutes: document.querySelector('#breakMinutes').value,
+    breakMinutes: 0,
     breaks: getBreakRows(),
     hourlyRate: document.querySelector('#hourlyRate').value,
     note: document.querySelector('#note').value.trim(),
