@@ -136,6 +136,20 @@ function repeatShift(shift, count, idFactory = (index) => `${Date.now()}-${index
   }));
 }
 
+function duplicateShiftNextDay(shift, idFactory = () => `${Date.now()}`) {
+  const nextDate = toISODate(addDays(parseISODate(shift.date), 1));
+  return {
+    ...shift,
+    id: idFactory(),
+    date: nextDate,
+    breaks: (shift.breaks || []).map((breakRow) => ({ ...breakRow })),
+  };
+}
+
+function updateEntryById(entries, id, updatedEntry) {
+  return (entries || []).map((entry) => (entry.id === id ? { ...updatedEntry, id } : entry));
+}
+
 function filterEntriesByRange(entries, start, end) {
   return (entries || []).filter((entry) => entry.date >= start && entry.date <= end);
 }
@@ -169,6 +183,8 @@ if (typeof module !== 'undefined') {
     minutesToHours,
     periodRange,
     repeatShift,
+    duplicateShiftNextDay,
+    updateEntryById,
     filterEntriesByRange,
     historyRange,
     filterEntriesByHistoryRange,

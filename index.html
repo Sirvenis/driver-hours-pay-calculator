@@ -121,7 +121,8 @@
     .status-banner { margin-top: 12px; padding: 12px; border-radius: 15px; background: #07111f; border: 1px solid var(--line); color: #dbeafe; font-weight: 750; }
     .entry-pay { color: var(--green); font-weight: 950; text-align: right; font-size: 1.08rem; }
     .entry-right { text-align: right; }
-    .delete { background: transparent; border: 1px solid #7f1d1d; color: #fca5a5; border-radius: 10px; padding: 7px 9px; margin-top: 8px; }
+    .delete, .edit { background: transparent; border: 1px solid #7f1d1d; color: #fca5a5; border-radius: 10px; padding: 7px 9px; margin-top: 8px; }
+    .edit { border-color: rgba(96,165,250,.45); color: #bfdbfe; margin-right: 6px; }
     .note { color: #dbeafe; font-size: .86rem; margin-top: 7px; }
     .empty { color: var(--muted); text-align: center; padding: 24px 8px; border: 1px dashed var(--line); border-radius: 16px; }
     .hint { color: var(--muted); font-size: .84rem; line-height: 1.45; margin: 10px 0 0; }
@@ -204,7 +205,8 @@
           <div class="result"><div id="previewHours" class="value">0h</div><div class="label-text">This shift hours</div></div>
           <div class="result"><div id="previewPay" class="value green">$0</div><div class="label-text">This shift pay</div></div>
         </div>
-        <button class="primary" type="submit">Save Shift</button>
+        <button id="saveShiftButton" class="primary" type="submit">Save Shift</button>
+        <button id="cancelEdit" class="secondary" type="button" hidden>Cancel Edit</button>
       </form>
       <div class="actions">
         <button id="duplicateLast" class="secondary" type="button">Copy Last Shift</button>

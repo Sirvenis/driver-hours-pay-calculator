@@ -121,6 +121,19 @@ function clearBreakRows() {
   breakRows.innerHTML = breakRowTemplate(1, false);
 }
 
+function setBreakRows(breaks = []) {
+  const breakRows = document.querySelector('#breakRows');
+  const rows = breaks.length ? breaks : [{}];
+  breakRows.innerHTML = rows.map((_, index) => breakRowTemplate(index + 1, index > 0)).join('');
+  Array.from(breakRows.querySelectorAll('.break-row')).forEach((row, index) => {
+    const breakRow = rows[index] || {};
+    row.querySelector('.break-start').value = breakRow.startTime || '';
+    row.querySelector('.break-finish').value = breakRow.finishTime || '';
+    row.querySelector('.break-duration').dataset.paid = breakRow.paid === true ? 'true' : 'false';
+  });
+  renumberBreakRows();
+}
+
 function formatBreakRows(breaks) {
   const validBreaks = (breaks || []).filter((breakRow) => breakRow.startTime && breakRow.finishTime);
   return validBreaks.map((breakRow) => {
@@ -143,6 +156,11 @@ function saveSettings() {
 }
 
 let entries = loadEntries();
+let editingEntryId = null;
+
+function newEntryId(index = 0) {
+  return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${index}`;
+}
 
 function applyDefaults() {
   const settings = loadSettings();
@@ -158,7 +176,7 @@ function applyDefaults() {
 
 function getFormShift() {
   return {
-    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    id: editingEntryId || newEntryId(),
     date: document.querySelector('#date').value,
     startTime: document.querySelector('#startTime').value,
     finishTime: document.querySelector('#finishTime').value,
@@ -169,6 +187,16 @@ function getFormShift() {
   };
 }
 
+function resetShiftFormAfterSave() {
+  editingEntryId = null;
+  document.querySelector('#saveShiftButton').textContent = 'Save Shift';
+  document.querySelector('#cancelEdit').hidden = true;
+  document.querySelector('#repeatCount').disabled = false;
+  document.querySelector('#repeatCount').value = '1';
+  document.querySelector('#note').value = '';
+  clearBreakRows();
+}
+
 function addShift(event) {
   event.preventDefault();
   const shift = getFormShift();
@@ -176,13 +204,16 @@ function addShift(event) {
     alert('Please enter a date, start time, and finish time.');
     return;
   }
-  entries.push(...repeatShift(shift, document.querySelector('#repeatCount').value, (index) => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${index}`)));
+  if (editingEntryId) {
+    entries = updateEntryById(entries, editingEntryId, shift);
+  } else {
+    entries.push(...repeatShift(shift, document.querySelector('#repeatCount').value, (index) => newEntryId(index)));
+  }
   entries = pruneEntriesForStorage(entries, todayISO(), FREE_HISTORY_DAYS);
   entries.sort((a, b) => `${b.date} ${b.startTime}`.localeCompare(`${a.date} ${a.startTime}`));
   saveEntries(entries);
   saveSettings();
-  document.querySelector('#note').value = '';
-  clearBreakRows();
+  resetShiftFormAfterSave();
   render();
 }
 
@@ -195,9 +226,33 @@ function deleteShift(id) {
 function duplicateLast() {
   if (!entries.length) return;
   const last = entries[0];
-  const copy = { ...last, id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), date: document.querySelector('#date').value || todayISO() };
+  const copy = duplicateShiftNextDay(last, () => newEntryId());
   entries.unshift(copy);
+  entries.sort((a, b) => `${b.date} ${b.startTime}`.localeCompare(`${a.date} ${a.startTime}`));
   saveEntries(entries);
+  render();
+}
+
+function startEditShift(id) {
+  const entry = entries.find((item) => item.id === id);
+  if (!entry) return;
+  editingEntryId = id;
+  document.querySelector('#date').value = entry.date;
+  document.querySelector('#startTime').value = entry.startTime;
+  document.querySelector('#finishTime').value = entry.finishTime;
+  document.querySelector('#hourlyRate').value = entry.hourlyRate;
+  document.querySelector('#note').value = entry.note || '';
+  document.querySelector('#repeatCount').value = '1';
+  document.querySelector('#repeatCount').disabled = true;
+  document.querySelector('#saveShiftButton').textContent = 'Update Shift';
+  document.querySelector('#cancelEdit').hidden = false;
+  setBreakRows(entry.breaks || []);
+  updatePreview();
+  document.querySelector('#shiftForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cancelEditShift() {
+  resetShiftFormAfterSave();
   render();
 }
 
@@ -268,7 +323,7 @@ function renderEntries() {
         <div class="entry-right">
           <div class="entry-pay">${money(shift.grossPay)}</div>
           <div class="muted">${hours(shift.paidHours)}</div>
-          <button class="delete" onclick="deleteShift('${shift.id}')">Delete</button>
+          <button class="edit" onclick="startEditShift('${shift.id}')">Edit</button><button class="delete" onclick="deleteShift('${shift.id}')">Delete</button>
         </div>
       </article>`;
   }).join('');
@@ -461,6 +516,7 @@ async function loadPaygTables() {
 applyDefaults();
 renumberBreakRows();
 document.querySelector('#shiftForm').addEventListener('submit', addShift);
+document.querySelector('#cancelEdit').addEventListener('click', cancelEditShift);
 document.querySelector('#duplicateLast').addEventListener('click', duplicateLast);
 document.querySelector('#clearAll').addEventListener('click', clearAll);
 document.querySelector('#emailTimesheet').addEventListener('click', emailTimesheet);

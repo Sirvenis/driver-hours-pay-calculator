@@ -10,6 +10,8 @@ const {
   pruneEntriesToHistoryLimit,
   pruneEntriesForStorage,
   repeatShift,
+  duplicateShiftNextDay,
+  updateEntryById,
 } = require('./calculator.js');
 
 function nearlyEqual(actual, expected, tolerance = 0.001) {
@@ -207,6 +209,38 @@ function testRepeatShiftCreatesConsecutiveCopiesWithFreshIds() {
   assert.strictEqual(repeated[1].breaks[0].finishTime, '12:30');
 }
 
+function testDuplicateShiftNextDayCopiesLastShiftAndIncrementsDate() {
+  const copy = duplicateShiftNextDay({
+    id: 'original',
+    date: '2026-05-01',
+    startTime: '07:00',
+    finishTime: '15:00',
+    breaks: [{ startTime: '12:00', finishTime: '12:30', paid: false }],
+    hourlyRate: 35,
+    note: 'Site A',
+  }, () => 'next-id');
+
+  assert.strictEqual(copy.id, 'next-id');
+  assert.strictEqual(copy.date, '2026-05-02');
+  assert.strictEqual(copy.startTime, '07:00');
+  assert.strictEqual(copy.note, 'Site A');
+  assert.deepStrictEqual(copy.breaks, [{ startTime: '12:00', finishTime: '12:30', paid: false }]);
+}
+
+function testUpdateEntryByIdReplacesOneSavedShift() {
+  const entries = [
+    { id: 'one', date: '2026-05-01', startTime: '07:00', finishTime: '15:00', hourlyRate: 35 },
+    { id: 'two', date: '2026-05-02', startTime: '08:00', finishTime: '16:00', hourlyRate: 35 },
+  ];
+
+  const updated = updateEntryById(entries, 'two', { id: 'ignored', date: '2026-05-03', startTime: '09:00', finishTime: '17:00', hourlyRate: 40 });
+
+  assert.deepStrictEqual(updated, [
+    { id: 'one', date: '2026-05-01', startTime: '07:00', finishTime: '15:00', hourlyRate: 35 },
+    { id: 'two', date: '2026-05-03', startTime: '09:00', finishTime: '17:00', hourlyRate: 40 },
+  ]);
+}
+
 function testHistoryRangeDefaultsToFourteenDaysIncludingAnchorDate() {
   const range = historyRange('2026-05-14');
   assert.deepStrictEqual(range, { start: '2026-05-01', end: '2026-05-14' });
@@ -268,6 +302,8 @@ const tests = [
   testFortnightlyTotalsIncludeBothWeeksFromStartDate,
   testMinutesToHours,
   testRepeatShiftCreatesConsecutiveCopiesWithFreshIds,
+  testDuplicateShiftNextDayCopiesLastShiftAndIncrementsDate,
+  testUpdateEntryByIdReplacesOneSavedShift,
   testHistoryRangeDefaultsToFourteenDaysIncludingAnchorDate,
   testFilterEntriesByHistoryRangeShowsFourteenDaysOnly,
   testPruneEntriesToFreeFourteenDayHistory,
